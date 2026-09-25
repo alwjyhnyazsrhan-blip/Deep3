@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account and player data for King of Deep",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique user ID"
+        },
+        "username": {
+          "type": "string",
+          "description": "Display name of the captain",
+          "maxLength": 50
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the player",
+          "maxLength": 100
+        },
+        "avatar": {
+          "type": "string",
+          "description": "Avatar icon or image"
+        },
+        "gold": {
+          "type": "number",
+          "description": "Total gold coins"
+        },
+        "gems": {
+          "type": "number",
+          "description": "Total precious gems"
+        },
+        "exp": {
+          "type": "number",
+          "description": "Experience points"
+        },
+        "server": {
+          "type": "string",
+          "description": "Active server region"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection storing player progress and profiles"
+    }
+  }
+}

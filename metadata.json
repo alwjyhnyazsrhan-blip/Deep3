@@ -1,0 +1,8 @@
+{
+  "name": "Remix ملوك الاعماق",
+  "description": "لعبة ملوك الأعماق - مغامرات القراصنة والحروب البحرية الاستراتيجية مع نظام أمان متقدم ومنع تعدد الجلسات",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
