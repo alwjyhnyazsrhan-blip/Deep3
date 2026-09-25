@@ -6524,22 +6524,22 @@ export default function App() {
       <style>{`
         :root {
             --ship-render-width: 290px;
-            --bottom-nav-height: 125px;
+            --bottom-nav-height: 145px;
             --overlay-top: 75px;
-            --overlay-bottom: 125px;
+            --overlay-bottom: 145px;
             --overlay-left: 2.5%;
             --overlay-width: 95%;
-            --overlay-radius: 12px;
-            --overlay-border: 3px solid #ca8a04;
+            --overlay-radius: 14px;
+            --overlay-border: 3.5px solid #ca8a04;
             --shop-border-width: 8px;
             --shop-flex-direction: row;
-            --shop-sidebar-width: 180px;
+            --shop-sidebar-width: 216px;
             --shop-sidebar-direction: column;
             --shop-sidebar-border-right: 2px solid #5c3a21;
             --shop-sidebar-border-bottom: none;
             --shop-sidebar-overflow-x: visible;
-            --shop-sidebar-padding: 10px;
-            --shop-item-min-width: 210px;
+            --shop-sidebar-padding: 12px;
+            --shop-item-min-width: 250px;
             --shop-max-height: 92vh;
             --grid-columns: 1fr 1fr;
         }
@@ -6586,31 +6586,31 @@ export default function App() {
         }
         .building-label {
             background: rgba(30, 15, 5, 0.98);
-            border: 3.5px solid #ca8a04;
+            border: 4px solid #ca8a04;
             color: #fef08a;
-            border-radius: 16px;
-            padding: 10px 24px;
-            font-size: 19px;
+            border-radius: 18px;
+            padding: 12px 28px;
+            font-size: 23px;
             font-weight: 1000;
             white-space: nowrap;
             box-shadow: 0 6px 20px rgba(0,0,0,0.9);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             direction: rtl;
             text-shadow: 0 2px 4px #000;
         }
         .building-icon {
-            font-size: 52px;
+            font-size: 62px;
             filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
-            margin-bottom: 3px;
+            margin-bottom: 4px;
         }
 
-        .top-bar { position: fixed; top: 14px; width: 95%; left: 2.5%; display: flex; justify-content: space-between; z-index: 15; }
-        .resource-box { background: rgba(40, 30, 20, 0.94); border: 2.5px solid #ca8a04; padding: 12px 22px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; min-width: 145px; color: #fff; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.75); }
+        .top-bar { position: fixed; top: 16px; width: 95%; left: 2.5%; display: flex; justify-content: space-between; z-index: 15; }
+        .resource-box { background: rgba(40, 30, 20, 0.94); border: 3px solid #ca8a04; padding: 14px 26px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; min-width: 175px; color: #fff; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.75); }
         .resource-box:hover { background: rgba(55, 40, 30, 0.98); transform: scale(1.05); }
-        .res-icon { width: 58px; height: 58px; }
-        .res-label { font-size: 19px; border-top: 1.5px solid #5d4037; padding-top: 6px; margin-top: 6px; width: 100%; text-align: center; font-weight: 900; color: #fef08a; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+        .res-icon { width: 70px; height: 70px; }
+        .res-label { font-size: 23px; border-top: 2px solid #5d4037; padding-top: 7px; margin-top: 7px; width: 100%; text-align: center; font-weight: 900; color: #fef08a; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
 
         .ship { 
             position: absolute; 
@@ -7477,12 +7477,12 @@ export default function App() {
             }
         }
 
-        #ship-menu { position: absolute; display: none; background: rgba(20, 12, 6, 0.98); border: 2.5px solid #ca8a04; border-radius: 14px; padding: 12px; z-index: 25; flex-direction: row; gap: 12px; width: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.85); }
-        .menu-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; min-width: 70px; transition: transform 0.1s; }
+        #ship-menu { position: absolute; display: none; background: rgba(20, 12, 6, 0.98); border: 3px solid #ca8a04; border-radius: 16px; padding: 14px; z-index: 25; flex-direction: row; gap: 14px; width: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.85); }
+        .menu-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 19px; font-weight: bold; cursor: pointer; min-width: 84px; transition: transform 0.1s; }
         .menu-btn:hover { transform: scale(1.1); }
-        .menu-icon { width: 50px; height: 50px; background: #854d0e; border-radius: 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; font-size: 26px; border: 2px solid #fef08a; }
+        .menu-icon { width: 60px; height: 60px; background: #854d0e; border-radius: 14px; margin-bottom: 7px; display: flex; align-items: center; justify-content: center; font-size: 31px; border: 2.5px solid #fef08a; }
 
-        .modal { display: none; position: absolute; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #1c1917; border: 2px solid #ca8a04; padding: 18px; border-radius: 14px; color: #fff; text-align: center; width: 280px; box-shadow: 0 6px 22px rgba(0,0,0,0.7); }
+        .modal { display: none; position: absolute; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #1c1917; border: 2.5px solid #ca8a04; padding: 22px; border-radius: 16px; color: #fff; text-align: center; width: 336px; box-shadow: 0 6px 22px rgba(0,0,0,0.7); font-size: 19px; }
         
         .bottom-nav {
           position: fixed;
@@ -7490,17 +7490,17 @@ export default function App() {
           left: 0;
           right: 0;
           width: 100%;
-          height: 114px !important;
+          height: 138px !important;
           background: url("https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/Aamaaq/refs/heads/main/background.jpg.png") center bottom/100% 100% no-repeat !important;
-          border-top: 2px solid rgba(234, 179, 8, 0.7) !important;
+          border-top: 2.5px solid rgba(234, 179, 8, 0.7) !important;
           box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(254, 240, 138, 0.25) !important;
           display: flex !important;
           direction: ltr !important;
           align-items: center !important;
           justify-content: space-evenly !important;
           z-index: 100 !important;
-          padding: 2px 4px 10px 4px !important;
-          gap: 2px !important;
+          padding: 2px 6px 12px 6px !important;
+          gap: 4px !important;
           overflow: visible !important;
           user-select: none !important;
           box-sizing: border-box !important;
@@ -7527,8 +7527,8 @@ export default function App() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 78px;
-          height: 78px;
+          width: 94px;
+          height: 94px;
           border-radius: 50%;
           background: radial-gradient(circle, rgba(234, 179, 8, 0.22) 0%, rgba(202, 138, 4, 0.07) 50%, transparent 72%);
           pointer-events: none;
@@ -7537,14 +7537,14 @@ export default function App() {
         }
 
         .nav-item:hover::before {
-          width: 88px;
-          height: 88px;
+          width: 106px;
+          height: 106px;
           background: radial-gradient(circle, rgba(250, 204, 21, 0.42) 0%, rgba(202, 138, 4, 0.15) 55%, transparent 75%);
         }
 
         .nav-item.active::before {
-          width: 92px;
-          height: 92px;
+          width: 110px;
+          height: 110px;
           background: radial-gradient(circle, rgba(56, 189, 248, 0.48) 0%, rgba(14, 165, 233, 0.18) 55%, transparent 75%);
         }
 
@@ -7560,43 +7560,43 @@ export default function App() {
           pointer-events: none !important;
         }
 
-        /* Calibrated heights so non-transparent artwork in all 7 icons is identically ~80px tall */
+        /* Calibrated heights so non-transparent artwork in all 7 icons is identically ~96px tall (+20%) */
         .nav-item-clan img {
-          height: 95px !important;
+          height: 114px !important;
           width: auto !important;
         }
         .nav-item-rank img {
-          height: 80px !important;
+          height: 96px !important;
           width: auto !important;
         }
         .nav-item-friends img {
-          height: 80px !important;
+          height: 96px !important;
           width: auto !important;
         }
         .nav-item-storage img {
-          height: 80px !important;
+          height: 96px !important;
           width: auto !important;
         }
         .nav-item-shop img {
-          height: 80px !important;
+          height: 96px !important;
           width: auto !important;
         }
         .nav-item-chat img {
-          height: 101px !important;
+          height: 121px !important;
           width: auto !important;
         }
         .nav-item-settings img {
-          height: 104px !important;
+          height: 125px !important;
           width: auto !important;
         }
 
         .nav-item:hover img {
-          transform: translateY(-4px) !important;
+          transform: translateY(-5px) !important;
           filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.9)) brightness(1.38) contrast(1.2) saturate(1.25) !important;
         }
 
         .nav-item.active img {
-          transform: translateY(-5px) !important;
+          transform: translateY(-6px) !important;
           filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 4px #ffffff) brightness(1.42) contrast(1.22) saturate(1.22) !important;
         }
 
@@ -7614,18 +7614,18 @@ export default function App() {
 
         .medallion-box {
           position: relative;
-          width: 44px;
-          height: 44px;
+          width: 53px;
+          height: 53px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .medallion-ring {
-          width: 42px;
-          height: 42px;
+          width: 50px;
+          height: 50px;
           border-radius: 50%;
-          border: 2px solid #ca8a04;
+          border: 2.5px solid #ca8a04;
           background: radial-gradient(circle at 35% 30%, #1e293b 0%, #0f172a 60%, #020617 100%);
           box-shadow: 0 4px 10px rgba(0,0,0,0.8), inset 0 0 8px rgba(250, 204, 21, 0.25);
           display: flex;
@@ -7637,11 +7637,11 @@ export default function App() {
 
         .jewel-top-diamond {
           position: absolute;
-          top: -5px;
+          top: -6px;
           left: 50%;
           transform: translateX(-50%);
-          width: 6px;
-          height: 6px;
+          width: 7px;
+          height: 7px;
           background: #38bdf8;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
           box-shadow: 0 0 6px #38bdf8;
@@ -7651,11 +7651,11 @@ export default function App() {
 
         .jewel-bottom-diamond {
           position: absolute;
-          bottom: -5px;
+          bottom: -6px;
           left: 50%;
           transform: translateX(-50%);
-          width: 6px;
-          height: 6px;
+          width: 7px;
+          height: 7px;
           background: #38bdf8;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
           box-shadow: 0 0 6px #38bdf8;
@@ -7664,15 +7664,15 @@ export default function App() {
         }
 
         .plaque-btn {
-          margin-top: 2px;
+          margin-top: 3px;
           width: 100%;
-          max-width: 58px;
-          padding: 1px 0;
+          max-width: 70px;
+          padding: 2px 0;
           background: linear-gradient(180deg, #1f1912 0%, #0a0805 100%);
           border: 1.5px solid #ca8a04;
-          border-radius: 4px;
+          border-radius: 5px;
           color: #fef08a;
-          font-size: 10.5px;
+          font-size: 13px;
           font-weight: 900;
           text-align: center;
           text-shadow: 0 1px 2px #000;
@@ -7694,21 +7694,22 @@ export default function App() {
             border-radius: var(--overlay-radius);
             z-index: 20;
             color: #fff;
-            padding: 16px;
-            padding-bottom: calc(var(--bottom-nav-height) + 16px);
+            padding: 18px;
+            padding-bottom: calc(var(--bottom-nav-height) + 18px);
             overflow-y: auto;
             direction: rtl;
             box-shadow: 0 15px 35px rgba(0,0,0,0.9);
             box-sizing: border-box;
+            font-size: 19px;
         }
         .tab-title {
-            font-size: 22px;
+            font-size: 26.5px;
             font-weight: 900;
             color: #facc15;
             text-align: center;
-            border-bottom: 2.5px solid #ca8a04;
-            padding-bottom: 10px;
-            margin-bottom: 18px;
+            border-bottom: 3px solid #ca8a04;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -7718,9 +7719,9 @@ export default function App() {
             background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
             color: #fff;
             border: 1.5px solid #ef4444;
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-size: 15px;
+            border-radius: 10px;
+            padding: 7px 17px;
+            font-size: 18px;
             font-weight: 800;
             cursor: pointer;
             box-shadow: 0 2px 6px rgba(0,0,0,0.4);
@@ -7734,25 +7735,26 @@ export default function App() {
         .grid-cards {
             display: grid;
             grid-template-columns: var(--grid-columns);
-            gap: 14px;
+            gap: 16px;
         }
         .shop-card {
             background: rgba(30, 24, 18, 0.95);
             border: 1.5px solid #a16207;
-            border-radius: 12px;
-            padding: 14px;
+            border-radius: 14px;
+            padding: 16px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            font-size: 18px;
         }
         .upgrade-btn {
             background: linear-gradient(180deg, #ca8a04 0%, #a16207 100%);
             color: #fff;
             border: 1.5px solid #fef08a;
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 14px;
+            border-radius: 10px;
+            padding: 10px 19px;
+            font-size: 17px;
             cursor: pointer;
             font-weight: 900;
             text-shadow: 0 1px 2px #000;
@@ -7952,23 +7954,23 @@ export default function App() {
                 <div className="building-label" style={{ 
                   marginBottom: '8px', 
                   background: portDestroyed ? 'rgba(50, 10, 10, 0.95)' : 'rgba(0,0,0,0.85)', 
-                  padding: '4px 14px', 
-                  borderRadius: '12px', 
+                  padding: '6px 17px', 
+                  borderRadius: '14px', 
                   border: portDestroyed ? '1.5px solid #ef4444' : '1px solid #ca8a04', 
                   whiteSpace: 'nowrap', 
                   boxShadow: portDestroyed ? '0 4px 14px rgba(239, 68, 68, 0.7)' : '0 4px 14px rgba(0,0,0,0.6)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '8px'
                 }}>
-                  <span style={{ fontSize: '15px', fontWeight: '900', color: portDestroyed ? '#fca5a5' : '#facc15', fontFamily: 'Cairo, sans-serif' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '900', color: portDestroyed ? '#fca5a5' : '#facc15', fontFamily: 'Cairo, sans-serif' }}>
                     {portDestroyed ? `🔥 بيت السمك (محترق ومدمر)` : `🐟 بيت السمك (مستوى ${fishStorageLevel})`}
                   </span>
                 </div>
 
                 <div style={{
-                  width: '170px',
-                  height: '170px',
+                  width: '204px',
+                  height: '204px',
                   position: 'relative',
                   filter: portDestroyed
                     ? 'grayscale(0.9) brightness(0.22) contrast(1.5) sepia(0.8) hue-rotate(-20deg) drop-shadow(0 0 16px rgba(239, 68, 68, 0.9))'
@@ -8017,7 +8019,7 @@ export default function App() {
                   position: 'absolute',
                   left: '73%', 
                   top: '26%', 
-                  width: '180px',
+                  width: '216px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -8038,20 +8040,20 @@ export default function App() {
                 <div className="building-label" style={{ 
                   marginBottom: '8px', 
                   background: portDestroyed ? 'rgba(50, 10, 10, 0.95)' : 'rgba(0,0,0,0.85)', 
-                  padding: '6px 14px', 
-                  borderRadius: '12px', 
+                  padding: '7px 17px', 
+                  borderRadius: '14px', 
                   border: portDestroyed ? '1.5px solid #ef4444' : '1.5px solid #ca8a04', 
                   whiteSpace: 'nowrap', 
                   boxShadow: portDestroyed ? '0 4px 14px rgba(239, 68, 68, 0.7)' : '0 4px 12px rgba(0,0,0,0.6)' 
                 }}>
-                  <span style={{ fontSize: '15px', fontWeight: '900', color: portDestroyed ? '#fca5a5' : '#facc15', fontFamily: 'Cairo, sans-serif' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '900', color: portDestroyed ? '#fca5a5' : '#facc15', fontFamily: 'Cairo, sans-serif' }}>
                     {portDestroyed ? `🔥 بيت السفن (محترق ومدمر)` : `⚓ بيت السفن (مستوى ${shipTowerLevel})`}
                   </span>
                 </div>
                 
                 <div style={{
-                  width: '160px',
-                  height: '160px',
+                  width: '192px',
+                  height: '192px',
                   position: 'relative',
                   filter: portDestroyed
                     ? 'grayscale(0.9) brightness(0.22) contrast(1.5) sepia(0.8) hue-rotate(-20deg) drop-shadow(0 0 16px rgba(239, 68, 68, 0.9))'
@@ -8328,19 +8330,19 @@ export default function App() {
                         {/* Level floating badge overlaid on ship */}
                         <span style={{
                           position: 'absolute',
-                          bottom: '-4px',
-                          right: '8px',
+                          bottom: '-5px',
+                          right: '10px',
                           background: 'rgba(133, 77, 14, 0.95)',
                           color: '#fff',
-                          border: '1.5px solid #fef08a',
-                          borderRadius: '6px',
-                          fontSize: '12.5px',
-                          padding: '2px 7px',
+                          border: '2px solid #fef08a',
+                          borderRadius: '8px',
+                          fontSize: '15px',
+                          padding: '3px 9px',
                           fontWeight: 'bold',
                           zIndex: 5,
                           whiteSpace: 'nowrap',
                           direction: 'rtl',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.8)'
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.85)'
                         }}>
                           {ship.imgEmoji || '⛵'} م.{ship.level ?? 1}
                         </span>

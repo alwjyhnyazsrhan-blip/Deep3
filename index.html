@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl" class="notranslate">
   <head>
     <meta charset="UTF-8" />
-    <!-- تفعيل وضع مصمم الكمبيوتر الدائم (Always Desktop Site Mode) -->
-    <meta name="viewport" id="game-viewport" content="width=1024, user-scalable=yes" />
+    <!-- تفعيل وضع مصمم الكمبيوتر الدائم مع قفل التكبير والتصغير لمنع التحريك المشوه -->
+    <meta name="viewport" id="game-viewport" content="width=1024, initial-scale=0.38, minimum-scale=0.38, maximum-scale=0.38, user-scalable=no" />
     <meta name="google" content="notranslate" />
     <title>Remix ملوك الاعماق</title>
     <meta name="description" content="لعبة ملوك الأعماق - مغامرات القراصنة والحروب البحرية الاستراتيجية مع نظام أمان متقدم ومنع تعدد الجلسات" />
@@ -11,7 +11,7 @@
     <meta property="og:description" content="لعبة ملوك الأعماق - مغامرات القراصنة والحروب البحرية الاستراتيجية مع نظام أمان متقدم ومنع تعدد الجلسات" />
 
     <script>
-      // فرض وتثبيت وضع مصمم الكمبيوتر (Desktop Site) تلقائياً ودائماً على كافة الأجهزة والهواتف
+      // فرض وتثبيت وضع مصمم الكمبيوتر (Desktop Site) تلقائياً مع قفل التكبير/التصغير (Disable Pinch/Double-tap Zoom)
       (function() {
         function enforceDesktopSite() {
           var meta = document.getElementById('game-viewport') || document.querySelector('meta[name="viewport"]');
@@ -30,9 +30,10 @@
 
           if (physicalWidth < desktopWidth) {
             var scale = Number((physicalWidth / desktopWidth).toFixed(4));
-            meta.setAttribute('content', 'width=' + desktopWidth + ', initial-scale=' + scale + ', minimum-scale=' + (scale * 0.3) + ', maximum-scale=3.0, user-scalable=yes');
+            // تثبيت المقياس تماماً (minimum-scale = maximum-scale = scale) لمنع أي تكبير أو تصغير
+            meta.setAttribute('content', 'width=' + desktopWidth + ', initial-scale=' + scale + ', minimum-scale=' + scale + ', maximum-scale=' + scale + ', user-scalable=no');
           } else {
-            meta.setAttribute('content', 'width=' + desktopWidth + ', initial-scale=1.0, maximum-scale=3.0, user-scalable=yes');
+            meta.setAttribute('content', 'width=' + desktopWidth + ', initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no');
           }
         }
 
@@ -41,6 +42,40 @@
         window.addEventListener('orientationchange', function() {
           setTimeout(enforceDesktopSite, 100);
         });
+
+        // منع التكبير والتصغير بإصبعين (Pinch-to-zoom) كلياً
+        window.addEventListener('touchstart', function(e) {
+          if (e.touches && e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', function(e) {
+          if (e.touches && e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        // منع إيماءات التكبير الخاصة بـ WebKit / iOS
+        window.addEventListener('gesturestart', function(e) {
+          e.preventDefault();
+        }, { passive: false });
+        window.addEventListener('gesturechange', function(e) {
+          e.preventDefault();
+        }, { passive: false });
+        window.addEventListener('gestureend', function(e) {
+          e.preventDefault();
+        }, { passive: false });
+
+        // منع النقر المزدوج للتكبير (Double-tap to zoom)
+        var lastTouchEnd = 0;
+        window.addEventListener('touchend', function(e) {
+          var now = Date.now();
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, { passive: false });
       })();
     </script>
 
@@ -55,10 +90,13 @@
         min-width: 1024px;
         height: 100%;
         overflow: hidden;
-        touch-action: manipulation;
+        touch-action: pan-x pan-y;
+        -webkit-user-select: none;
+        user-select: none;
         background-color: #0b1329;
         color: #ffffff;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 19px;
       }
       .initial-loader {
         display: flex;
