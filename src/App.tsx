@@ -3667,7 +3667,11 @@ export default function App() {
         const data = docSnap.data();
         const docUserId = data.userId || docSnap.id;
         const docEmail = (data.email || '').toLowerCase().trim();
-        const docUsername = data.username || 'قبطان_البحار';
+        const rawUsername = (data.username || '').trim();
+        const isPlaceholder = rawUsername === 'قبطان_البحار' || rawUsername === 'قبطان_الأعماق' || rawUsername === 'قبطان_مجهول';
+        const docUsername = !isPlaceholder && rawUsername !== ''
+          ? rawUsername
+          : (docEmail ? docEmail.split('@')[0] : (data.displayName || 'لاعب'));
 
         playerList.push({
           id: docSnap.id,
@@ -6524,27 +6528,27 @@ export default function App() {
       <style>{`
         :root {
             --ship-render-width: 290px;
-            --bottom-nav-height: 145px;
-            --overlay-top: 75px;
-            --overlay-bottom: 145px;
+            --bottom-nav-height: 180px;
+            --overlay-top: 85px;
+            --overlay-bottom: 180px;
             --overlay-left: 2.5%;
             --overlay-width: 95%;
-            --overlay-radius: 14px;
-            --overlay-border: 3.5px solid #ca8a04;
+            --overlay-radius: 16px;
+            --overlay-border: 4px solid #ca8a04;
             --shop-border-width: 8px;
             --shop-flex-direction: row;
-            --shop-sidebar-width: 216px;
+            --shop-sidebar-width: 230px;
             --shop-sidebar-direction: column;
             --shop-sidebar-border-right: 2px solid #5c3a21;
             --shop-sidebar-border-bottom: none;
             --shop-sidebar-overflow-x: visible;
-            --shop-sidebar-padding: 12px;
-            --shop-item-min-width: 250px;
+            --shop-sidebar-padding: 14px;
+            --shop-item-min-width: 260px;
             --shop-max-height: 92vh;
             --grid-columns: 1fr 1fr;
         }
 
-        /* وضع مصمم الكمبيوتر الدائم (Always Desktop Site Mode) - إلغاء تقليص الشاشة للهواتف */
+        /* وضع مصمم الكمبيوتر الدائم (Always Desktop Site Mode) - تكبير النصوص والأيقونات بنسبة 40% */
 
         #harbor-viewport { 
             position: fixed; 
@@ -6586,31 +6590,31 @@ export default function App() {
         }
         .building-label {
             background: rgba(30, 15, 5, 0.98);
-            border: 4px solid #ca8a04;
+            border: 5px solid #ca8a04;
             color: #fef08a;
-            border-radius: 18px;
-            padding: 12px 28px;
-            font-size: 23px;
+            border-radius: 24px;
+            padding: 18px 42px;
+            font-size: 38px;
             font-weight: 1000;
             white-space: nowrap;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.9);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.95);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 18px;
             direction: rtl;
-            text-shadow: 0 2px 4px #000;
+            text-shadow: 0 2px 5px #000;
         }
         .building-icon {
-            font-size: 62px;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
-            margin-bottom: 4px;
+            font-size: 100px;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.75));
+            margin-bottom: 6px;
         }
 
-        .top-bar { position: fixed; top: 16px; width: 95%; left: 2.5%; display: flex; justify-content: space-between; z-index: 15; }
-        .resource-box { background: rgba(40, 30, 20, 0.94); border: 3px solid #ca8a04; padding: 14px 26px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; min-width: 175px; color: #fff; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 6px 20px rgba(0,0,0,0.75); }
+        .top-bar { position: fixed; top: 18px; width: 95%; left: 2.5%; display: flex; justify-content: space-between; z-index: 15; }
+        .resource-box { background: rgba(40, 30, 20, 0.94); border: 4px solid #ca8a04; padding: 20px 38px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; min-width: 270px; color: #fff; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.8); }
         .resource-box:hover { background: rgba(55, 40, 30, 0.98); transform: scale(1.05); }
-        .res-icon { width: 70px; height: 70px; }
-        .res-label { font-size: 23px; border-top: 2px solid #5d4037; padding-top: 7px; margin-top: 7px; width: 100%; text-align: center; font-weight: 900; color: #fef08a; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+        .res-icon { width: 115px; height: 115px; }
+        .res-label { font-size: 38px; border-top: 3px solid #5d4037; padding-top: 10px; margin-top: 10px; width: 100%; text-align: center; font-weight: 900; color: #fef08a; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
 
         .ship { 
             position: absolute; 
@@ -7477,12 +7481,12 @@ export default function App() {
             }
         }
 
-        #ship-menu { position: absolute; display: none; background: rgba(20, 12, 6, 0.98); border: 3px solid #ca8a04; border-radius: 16px; padding: 14px; z-index: 25; flex-direction: row; gap: 14px; width: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.85); }
-        .menu-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 19px; font-weight: bold; cursor: pointer; min-width: 84px; transition: transform 0.1s; }
+        #ship-menu { position: absolute; display: none; background: rgba(20, 12, 6, 0.98); border: 4.5px solid #ca8a04; border-radius: 24px; padding: 22px; z-index: 25; flex-direction: row; gap: 22px; width: auto; box-shadow: 0 6px 25px rgba(0,0,0,0.9); }
+        .menu-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 32px; font-weight: bold; cursor: pointer; min-width: 135px; transition: transform 0.1s; }
         .menu-btn:hover { transform: scale(1.1); }
-        .menu-icon { width: 60px; height: 60px; background: #854d0e; border-radius: 14px; margin-bottom: 7px; display: flex; align-items: center; justify-content: center; font-size: 31px; border: 2.5px solid #fef08a; }
+        .menu-icon { width: 98px; height: 98px; background: #854d0e; border-radius: 22px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid #fef08a; }
 
-        .modal { display: none; position: absolute; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #1c1917; border: 2.5px solid #ca8a04; padding: 22px; border-radius: 16px; color: #fff; text-align: center; width: 336px; box-shadow: 0 6px 22px rgba(0,0,0,0.7); font-size: 19px; }
+        .modal { display: none; position: absolute; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #1c1917; border: 4px solid #ca8a04; padding: 32px; border-radius: 24px; color: #fff; text-align: center; width: 480px; box-shadow: 0 8px 28px rgba(0,0,0,0.85); font-size: 30px; }
         
         .bottom-nav {
           position: fixed;
@@ -7490,17 +7494,17 @@ export default function App() {
           left: 0;
           right: 0;
           width: 100%;
-          height: 138px !important;
+          height: 180px !important;
           background: url("https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/Aamaaq/refs/heads/main/background.jpg.png") center bottom/100% 100% no-repeat !important;
-          border-top: 2.5px solid rgba(234, 179, 8, 0.7) !important;
-          box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(254, 240, 138, 0.25) !important;
+          border-top: 3.5px solid rgba(234, 179, 8, 0.8) !important;
+          box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(254, 240, 138, 0.3) !important;
           display: flex !important;
           direction: ltr !important;
           align-items: center !important;
           justify-content: space-evenly !important;
           z-index: 100 !important;
-          padding: 2px 6px 12px 6px !important;
-          gap: 4px !important;
+          padding: 4px 10px 16px 10px !important;
+          gap: 8px !important;
           overflow: visible !important;
           user-select: none !important;
           box-sizing: border-box !important;
@@ -7527,8 +7531,8 @@ export default function App() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 94px;
-          height: 94px;
+          width: 125px;
+          height: 125px;
           border-radius: 50%;
           background: radial-gradient(circle, rgba(234, 179, 8, 0.22) 0%, rgba(202, 138, 4, 0.07) 50%, transparent 72%);
           pointer-events: none;
@@ -7537,14 +7541,14 @@ export default function App() {
         }
 
         .nav-item:hover::before {
-          width: 106px;
-          height: 106px;
+          width: 140px;
+          height: 140px;
           background: radial-gradient(circle, rgba(250, 204, 21, 0.42) 0%, rgba(202, 138, 4, 0.15) 55%, transparent 75%);
         }
 
         .nav-item.active::before {
-          width: 110px;
-          height: 110px;
+          width: 145px;
+          height: 145px;
           background: radial-gradient(circle, rgba(56, 189, 248, 0.48) 0%, rgba(14, 165, 233, 0.18) 55%, transparent 75%);
         }
 
@@ -7560,43 +7564,43 @@ export default function App() {
           pointer-events: none !important;
         }
 
-        /* Calibrated heights so non-transparent artwork in all 7 icons is identically ~96px tall (+20%) */
+        /* 40% enlarged navigation icons */
         .nav-item-clan img {
-          height: 114px !important;
+          height: 160px !important;
           width: auto !important;
         }
         .nav-item-rank img {
-          height: 96px !important;
+          height: 140px !important;
           width: auto !important;
         }
         .nav-item-friends img {
-          height: 96px !important;
+          height: 140px !important;
           width: auto !important;
         }
         .nav-item-storage img {
-          height: 96px !important;
+          height: 140px !important;
           width: auto !important;
         }
         .nav-item-shop img {
-          height: 96px !important;
+          height: 140px !important;
           width: auto !important;
         }
         .nav-item-chat img {
-          height: 121px !important;
+          height: 170px !important;
           width: auto !important;
         }
         .nav-item-settings img {
-          height: 125px !important;
+          height: 175px !important;
           width: auto !important;
         }
 
         .nav-item:hover img {
-          transform: translateY(-5px) !important;
+          transform: translateY(-6px) !important;
           filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.9)) brightness(1.38) contrast(1.2) saturate(1.25) !important;
         }
 
         .nav-item.active img {
-          transform: translateY(-6px) !important;
+          transform: translateY(-7px) !important;
           filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 4px #ffffff) brightness(1.42) contrast(1.22) saturate(1.22) !important;
         }
 
@@ -7609,25 +7613,25 @@ export default function App() {
           border-color: #38bdf8 !important;
           color: #38bdf8 !important;
           background: linear-gradient(180deg, #0284c7 0%, #075985 100%) !important;
-          box-shadow: 0 0 10px rgba(56, 189, 248, 0.7) !important;
+          box-shadow: 0 0 12px rgba(56, 189, 248, 0.8) !important;
         }
 
         .medallion-box {
           position: relative;
-          width: 53px;
-          height: 53px;
+          width: 82px;
+          height: 82px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .medallion-ring {
-          width: 50px;
-          height: 50px;
+          width: 78px;
+          height: 78px;
           border-radius: 50%;
-          border: 2.5px solid #ca8a04;
+          border: 3.5px solid #ca8a04;
           background: radial-gradient(circle at 35% 30%, #1e293b 0%, #0f172a 60%, #020617 100%);
-          box-shadow: 0 4px 10px rgba(0,0,0,0.8), inset 0 0 8px rgba(250, 204, 21, 0.25);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.85), inset 0 0 10px rgba(250, 204, 21, 0.3);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -7637,46 +7641,46 @@ export default function App() {
 
         .jewel-top-diamond {
           position: absolute;
-          top: -6px;
+          top: -9px;
           left: 50%;
           transform: translateX(-50%);
-          width: 7px;
-          height: 7px;
+          width: 11px;
+          height: 11px;
           background: #38bdf8;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-          box-shadow: 0 0 6px #38bdf8;
-          border: 1px solid #e0f2fe;
+          box-shadow: 0 0 8px #38bdf8;
+          border: 1.5px solid #e0f2fe;
           z-index: 2;
         }
 
         .jewel-bottom-diamond {
           position: absolute;
-          bottom: -6px;
+          bottom: -9px;
           left: 50%;
           transform: translateX(-50%);
-          width: 7px;
-          height: 7px;
+          width: 11px;
+          height: 11px;
           background: #38bdf8;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-          box-shadow: 0 0 6px #38bdf8;
-          border: 1px solid #e0f2fe;
+          box-shadow: 0 0 8px #38bdf8;
+          border: 1.5px solid #e0f2fe;
           z-index: 2;
         }
 
         .plaque-btn {
-          margin-top: 3px;
+          margin-top: 5px;
           width: 100%;
-          max-width: 70px;
-          padding: 2px 0;
+          max-width: 110px;
+          padding: 4px 0;
           background: linear-gradient(180deg, #1f1912 0%, #0a0805 100%);
-          border: 1.5px solid #ca8a04;
-          border-radius: 5px;
+          border: 2.5px solid #ca8a04;
+          border-radius: 8px;
           color: #fef08a;
-          font-size: 13px;
+          font-size: 21px;
           font-weight: 900;
           text-align: center;
-          text-shadow: 0 1px 2px #000;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+          text-shadow: 0 2px 3px #000;
+          box-shadow: 0 3px 6px rgba(0,0,0,0.85);
           white-space: nowrap;
           transition: all 0.2s ease;
         }
@@ -7694,37 +7698,37 @@ export default function App() {
             border-radius: var(--overlay-radius);
             z-index: 20;
             color: #fff;
-            padding: 18px;
-            padding-bottom: calc(var(--bottom-nav-height) + 18px);
+            padding: 26px;
+            padding-bottom: calc(var(--bottom-nav-height) + 26px);
             overflow-y: auto;
             direction: rtl;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.9);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.92);
             box-sizing: border-box;
-            font-size: 19px;
+            font-size: 30px;
         }
         .tab-title {
-            font-size: 26.5px;
+            font-size: 44px;
             font-weight: 900;
             color: #facc15;
             text-align: center;
-            border-bottom: 3px solid #ca8a04;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
+            border-bottom: 4px solid #ca8a04;
+            padding-bottom: 16px;
+            margin-bottom: 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.85);
+            text-shadow: 0 3px 6px rgba(0,0,0,0.9);
         }
         .close-tab-btn {
             background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
             color: #fff;
-            border: 1.5px solid #ef4444;
-            border-radius: 10px;
-            padding: 7px 17px;
-            font-size: 18px;
-            font-weight: 800;
+            border: 2.5px solid #ef4444;
+            border-radius: 14px;
+            padding: 10px 28px;
+            font-size: 29px;
+            font-weight: 900;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
             transition: all 0.15s ease;
         }
         .close-tab-btn:hover {
@@ -7735,30 +7739,30 @@ export default function App() {
         .grid-cards {
             display: grid;
             grid-template-columns: var(--grid-columns);
-            gap: 16px;
+            gap: 22px;
         }
         .shop-card {
             background: rgba(30, 24, 18, 0.95);
-            border: 1.5px solid #a16207;
-            border-radius: 14px;
-            padding: 16px;
+            border: 2px solid #a16207;
+            border-radius: 20px;
+            padding: 24px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            font-size: 18px;
+            gap: 22px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.55);
+            font-size: 28px;
         }
         .upgrade-btn {
             background: linear-gradient(180deg, #ca8a04 0%, #a16207 100%);
             color: #fff;
-            border: 1.5px solid #fef08a;
-            border-radius: 10px;
-            padding: 10px 19px;
-            font-size: 17px;
+            border: 2px solid #fef08a;
+            border-radius: 14px;
+            padding: 15px 30px;
+            font-size: 28px;
             cursor: pointer;
             font-weight: 900;
             text-shadow: 0 1px 2px #000;
-            box-shadow: 0 2px 8px rgba(202,138,4,0.4);
+            box-shadow: 0 3px 10px rgba(202,138,4,0.45);
             transition: all 0.2s;
         }
         .upgrade-btn:hover {
@@ -7963,14 +7967,14 @@ export default function App() {
                   alignItems: 'center',
                   gap: '8px'
                 }}>
-                  <span style={{ fontSize: '18px', fontWeight: '900', color: portDestroyed ? '#fca5a5' : '#facc15', fontFamily: 'Cairo, sans-serif' }}>
+                  <span style={{ fontSize: '21px', fontWeight: '900', color: portDestroyed ? '#fca5a5' : '#facc15', fontFamily: 'Cairo, sans-serif' }}>
                     {portDestroyed ? `🔥 بيت السمك (محترق ومدمر)` : `🐟 بيت السمك (مستوى ${fishStorageLevel})`}
                   </span>
                 </div>
 
                 <div style={{
-                  width: '204px',
-                  height: '204px',
+                  width: '238px',
+                  height: '238px',
                   position: 'relative',
                   filter: portDestroyed
                     ? 'grayscale(0.9) brightness(0.22) contrast(1.5) sepia(0.8) hue-rotate(-20deg) drop-shadow(0 0 16px rgba(239, 68, 68, 0.9))'
@@ -10243,7 +10247,6 @@ export default function App() {
             leaderboardSearchQuery={leaderboardSearchQuery}
             setLeaderboardSearchQuery={setLeaderboardSearchQuery}
             handleOpenProfile={handleOpenProfile}
-            handleCopyGameLink={handleCopyGameLink}
             setActiveTab={setActiveTab}
           />
 
