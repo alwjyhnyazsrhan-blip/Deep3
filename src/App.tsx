@@ -866,6 +866,18 @@ export default function App() {
   const [showAdSelectorModal, setShowAdSelectorModal] = useState<boolean>(false);
   const [showLegendaryRepairSparkles, setShowLegendaryRepairSparkles] = useState<boolean>(false);
 
+  // --- Post-Detonation Custom Message Modal (إرسال رسالة للشخص الذي فجرت سفنه أو ميناءه) ---
+  const [postDetonationModal, setPostDetonationModal] = useState<{
+    isOpen: boolean;
+    targetDocId: string;
+    targetPlayerName: string;
+    targetPlayerAvatar: string;
+    adTitle: string;
+    allDestroyed: boolean;
+  } | null>(null);
+  const [detonationCustomMessage, setDetonationCustomMessage] = useState<string>('');
+  const [isSendingDetonationMessage, setIsSendingDetonationMessage] = useState<boolean>(false);
+
   // Helper to dynamically calculate launch trajectory angle from bottom-right corner (96%, 96%) to target
   const getRocketLaunchAngle = (targetLeftStr: string, targetTopStr: string) => {
     const startX = 96;
@@ -1843,6 +1855,7 @@ export default function App() {
       // تشغيل الصوت الملحمي المطلوب بعد ما يتم التفجير برسالة التفجير مباشرة
       playDetonationWarningVoiceAndSound();
 
+      let allDestroyed = false;
       const targetDocId = inspectedPlayer.userId || inspectedPlayer.id;
       if (targetDocId && db) {
         const baseShips = (inspectedPlayer.ships && Array.isArray(inspectedPlayer.ships) && inspectedPlayer.ships.length > 0)
@@ -1850,7 +1863,6 @@ export default function App() {
           : getInspectedPlayerShips(inspectedPlayer);
 
         // Deal 20,000 damage to all ships
-        let allDestroyed = false;
         const updatedShips = baseShips.map((s: any) => {
           const maxH = s.maxHeart || (typeof s.level === 'number' ? (s.level * 1000) + 10000 : 10000);
           const currentHeart = typeof s.heart === 'number' ? s.heart : maxH;
@@ -1929,7 +1941,66 @@ export default function App() {
 
       showToast("💥 تم إطلاق رسالة التفجير وإلحاق 20,000 ضرر بالأسطول!", "success");
 
+      // فتح خانة كتابة رسالة التفجير وإرسالها مباشرة للشخص الذي فجرت سفنه أو ميناءه
+      setPostDetonationModal({
+        isOpen: true,
+        targetDocId: targetDocId || '',
+        targetPlayerName: inspectedPlayer?.username || 'القبطان',
+        targetPlayerAvatar: inspectedPlayer?.avatar || '⚓',
+        adTitle,
+        allDestroyed
+      });
+      setDetonationCustomMessage('');
+
     }, 1800);
+  };
+
+  const handleSendDetonationMessage = async () => {
+    if (!postDetonationModal || !detonationCustomMessage.trim()) return;
+    const msgText = detonationCustomMessage.trim();
+    setIsSendingDetonationMessage(true);
+
+    try {
+      const { targetDocId, targetPlayerName, adTitle } = postDetonationModal;
+
+      // 1. Dispatch event to harborEvents so target gets real-time notification
+      await createHarborEvent(targetDocId, 'DETONATION_MESSAGE', {
+        senderName: username || 'القبطان',
+        senderAvatar: avatar || '📡',
+        message: msgText,
+        targetName: targetPlayerName,
+        adTitle
+      });
+
+      // 2. Broadcast message in Island Chat
+      await sendSecureChatMessage(
+        username || 'القبطان',
+        avatar || '📡',
+        `📡 [رسالة تفجير موجهة إلى @${targetPlayerName}]: "${msgText}"`
+      );
+
+      // 3. Update target user doc with notification in Firestore
+      if (targetDocId && db) {
+        await updateDoc(doc(db, 'users', targetDocId), {
+          lastDetonationMessage: {
+            from: username || 'القبطان',
+            fromAvatar: avatar || '📡',
+            message: msgText,
+            time: new Date().toISOString()
+          },
+          updatedAt: new Date().toISOString()
+        }).catch(err => console.warn("Failed updating lastDetonationMessage:", err));
+      }
+
+      showToast(`✉️ تم إرسال رسالتك للقبطان @${targetPlayerName} بنجاح!`, 'success');
+      setDetonationCustomMessage('');
+      setPostDetonationModal(null);
+    } catch (err: any) {
+      console.error("Error sending detonation message:", err);
+      showToast("تعذر إرسال الرسالة: " + (err.message || ''), 'error');
+    } finally {
+      setIsSendingDetonationMessage(false);
+    }
   };
 
   const handleLaunchAtomicBomb = async () => {
@@ -3933,6 +4004,19 @@ export default function App() {
                 createdAt: new Date().toISOString()
               });
               showToast(`🎁 هدية ذهب! أرسل لك القبطان @${senderName} مبلغ 🪙 ${giftAmount.toLocaleString()} ذهبة! 🎉`, 'success');
+            } else if (ev.type === 'DETONATION_MESSAGE') {
+              const sender = ev.attackerName || 'قبطان معادٍ';
+              const customMsg = ev.payload?.message || '';
+              queueNotification({
+                id: 'det_msg_' + evId,
+                type: 'ATTACK',
+                title: `📡 رسالة تفجير من القبطان @${sender}!`,
+                message: `"${customMsg}"`,
+                icon: '✉️',
+                createdAt: new Date().toISOString()
+              });
+              showToast(`✉️ وصلتك رسالة تفجير من القبطان @${sender}: "${customMsg}"`, 'info');
+              await updateDoc(evDoc.ref, { status: 'RESOLVED' }).catch(() => {});
             } else if (ev.type === 'LOOT') {
               const lootType = ev.payload?.lootType || 'gold';
               const lootAmt = ev.payload?.amount || 1000;
@@ -6528,9 +6612,9 @@ export default function App() {
       <style>{`
         :root {
             --ship-render-width: 290px;
-            --bottom-nav-height: 180px;
-            --overlay-top: 85px;
-            --overlay-bottom: 180px;
+            --bottom-nav-height: 162px;
+            --overlay-top: 78px;
+            --overlay-bottom: 162px;
             --overlay-left: 2.5%;
             --overlay-width: 95%;
             --overlay-radius: 16px;
@@ -6548,7 +6632,7 @@ export default function App() {
             --grid-columns: 1fr 1fr;
         }
 
-        /* وضع مصمم الكمبيوتر الدائم (Always Desktop Site Mode) - تكبير النصوص والأيقونات بنسبة 40% */
+        /* وضع مصمم الكمبيوتر الدائم (Always Desktop Site Mode) - مقاسات متناسقة وواضحة لجميع القوائم */
 
         #harbor-viewport { 
             position: fixed; 
@@ -6590,31 +6674,31 @@ export default function App() {
         }
         .building-label {
             background: rgba(30, 15, 5, 0.98);
-            border: 5px solid #ca8a04;
+            border: 4.5px solid #ca8a04;
             color: #fef08a;
-            border-radius: 24px;
-            padding: 18px 42px;
-            font-size: 38px;
+            border-radius: 20px;
+            padding: 16px 36px;
+            font-size: 34px;
             font-weight: 1000;
             white-space: nowrap;
             box-shadow: 0 8px 24px rgba(0,0,0,0.95);
             display: flex;
             align-items: center;
-            gap: 18px;
+            gap: 16px;
             direction: rtl;
             text-shadow: 0 2px 5px #000;
         }
         .building-icon {
-            font-size: 100px;
+            font-size: 90px;
             filter: drop-shadow(0 5px 10px rgba(0,0,0,0.75));
             margin-bottom: 6px;
         }
 
-        .top-bar { position: fixed; top: 18px; width: 95%; left: 2.5%; display: flex; justify-content: space-between; z-index: 15; }
-        .resource-box { background: rgba(40, 30, 20, 0.94); border: 4px solid #ca8a04; padding: 20px 38px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; min-width: 270px; color: #fff; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.8); }
+        .top-bar { position: fixed; top: 16px; width: 95%; left: 2.5%; display: flex; justify-content: space-between; z-index: 15; }
+        .resource-box { background: rgba(40, 30, 20, 0.94); border: 4px solid #ca8a04; padding: 18px 34px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; min-width: 240px; color: #fff; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.8); }
         .resource-box:hover { background: rgba(55, 40, 30, 0.98); transform: scale(1.05); }
-        .res-icon { width: 115px; height: 115px; }
-        .res-label { font-size: 38px; border-top: 3px solid #5d4037; padding-top: 10px; margin-top: 10px; width: 100%; text-align: center; font-weight: 900; color: #fef08a; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+        .res-icon { width: 102px; height: 102px; }
+        .res-label { font-size: 34px; border-top: 3px solid #5d4037; padding-top: 8px; margin-top: 8px; width: 100%; text-align: center; font-weight: 900; color: #fef08a; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
 
         .ship { 
             position: absolute; 
@@ -7481,12 +7565,12 @@ export default function App() {
             }
         }
 
-        #ship-menu { position: absolute; display: none; background: rgba(20, 12, 6, 0.98); border: 4.5px solid #ca8a04; border-radius: 24px; padding: 22px; z-index: 25; flex-direction: row; gap: 22px; width: auto; box-shadow: 0 6px 25px rgba(0,0,0,0.9); }
-        .menu-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 32px; font-weight: bold; cursor: pointer; min-width: 135px; transition: transform 0.1s; }
-        .menu-btn:hover { transform: scale(1.1); }
-        .menu-icon { width: 98px; height: 98px; background: #854d0e; border-radius: 22px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid #fef08a; }
+        #ship-menu { position: absolute; display: none; background: rgba(20, 12, 6, 0.98); border: 4px solid #ca8a04; border-radius: 20px; padding: 18px; z-index: 25; flex-direction: row; gap: 18px; width: auto; box-shadow: 0 6px 25px rgba(0,0,0,0.9); }
+        .menu-btn { display: flex; flex-direction: column; align-items: center; color: #fff; font-size: 28px; font-weight: bold; cursor: pointer; min-width: 120px; transition: transform 0.1s; }
+        .menu-btn:hover { transform: scale(1.08); }
+        .menu-icon { width: 88px; height: 88px; background: #854d0e; border-radius: 18px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 45px; border: 3.5px solid #fef08a; }
 
-        .modal { display: none; position: absolute; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #1c1917; border: 4px solid #ca8a04; padding: 32px; border-radius: 24px; color: #fff; text-align: center; width: 480px; box-shadow: 0 8px 28px rgba(0,0,0,0.85); font-size: 30px; }
+        .modal { display: none; position: absolute; z-index: 100; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #1c1917; border: 4px solid #ca8a04; padding: 28px; border-radius: 20px; color: #fff; text-align: center; width: 430px; box-shadow: 0 8px 28px rgba(0,0,0,0.85); font-size: 27px; }
         
         .bottom-nav {
           position: fixed;
@@ -7494,7 +7578,7 @@ export default function App() {
           left: 0;
           right: 0;
           width: 100%;
-          height: 180px !important;
+          height: 162px !important;
           background: url("https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/Aamaaq/refs/heads/main/background.jpg.png") center bottom/100% 100% no-repeat !important;
           border-top: 3.5px solid rgba(234, 179, 8, 0.8) !important;
           box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(254, 240, 138, 0.3) !important;
@@ -7503,8 +7587,8 @@ export default function App() {
           align-items: center !important;
           justify-content: space-evenly !important;
           z-index: 100 !important;
-          padding: 4px 10px 16px 10px !important;
-          gap: 8px !important;
+          padding: 4px 10px 14px 10px !important;
+          gap: 6px !important;
           overflow: visible !important;
           user-select: none !important;
           box-sizing: border-box !important;
@@ -7531,8 +7615,8 @@ export default function App() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 125px;
-          height: 125px;
+          width: 112px;
+          height: 112px;
           border-radius: 50%;
           background: radial-gradient(circle, rgba(234, 179, 8, 0.22) 0%, rgba(202, 138, 4, 0.07) 50%, transparent 72%);
           pointer-events: none;
@@ -7541,14 +7625,14 @@ export default function App() {
         }
 
         .nav-item:hover::before {
-          width: 140px;
-          height: 140px;
+          width: 126px;
+          height: 126px;
           background: radial-gradient(circle, rgba(250, 204, 21, 0.42) 0%, rgba(202, 138, 4, 0.15) 55%, transparent 75%);
         }
 
         .nav-item.active::before {
-          width: 145px;
-          height: 145px;
+          width: 130px;
+          height: 130px;
           background: radial-gradient(circle, rgba(56, 189, 248, 0.48) 0%, rgba(14, 165, 233, 0.18) 55%, transparent 75%);
         }
 
@@ -7564,43 +7648,43 @@ export default function App() {
           pointer-events: none !important;
         }
 
-        /* 40% enlarged navigation icons */
+        /* Consistent navigation icons (-10% reduction for perfect harmony) */
         .nav-item-clan img {
-          height: 160px !important;
+          height: 144px !important;
           width: auto !important;
         }
         .nav-item-rank img {
-          height: 140px !important;
+          height: 126px !important;
           width: auto !important;
         }
         .nav-item-friends img {
-          height: 140px !important;
+          height: 126px !important;
           width: auto !important;
         }
         .nav-item-storage img {
-          height: 140px !important;
+          height: 126px !important;
           width: auto !important;
         }
         .nav-item-shop img {
-          height: 140px !important;
+          height: 126px !important;
           width: auto !important;
         }
         .nav-item-chat img {
-          height: 170px !important;
+          height: 152px !important;
           width: auto !important;
         }
         .nav-item-settings img {
-          height: 175px !important;
+          height: 156px !important;
           width: auto !important;
         }
 
         .nav-item:hover img {
-          transform: translateY(-6px) !important;
+          transform: translateY(-5px) !important;
           filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.9)) brightness(1.38) contrast(1.2) saturate(1.25) !important;
         }
 
         .nav-item.active img {
-          transform: translateY(-7px) !important;
+          transform: translateY(-6px) !important;
           filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 4px #ffffff) brightness(1.42) contrast(1.22) saturate(1.22) !important;
         }
 
@@ -7618,18 +7702,18 @@ export default function App() {
 
         .medallion-box {
           position: relative;
-          width: 82px;
-          height: 82px;
+          width: 74px;
+          height: 74px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .medallion-ring {
-          width: 78px;
-          height: 78px;
+          width: 70px;
+          height: 70px;
           border-radius: 50%;
-          border: 3.5px solid #ca8a04;
+          border: 3px solid #ca8a04;
           background: radial-gradient(circle at 35% 30%, #1e293b 0%, #0f172a 60%, #020617 100%);
           box-shadow: 0 4px 12px rgba(0,0,0,0.85), inset 0 0 10px rgba(250, 204, 21, 0.3);
           display: flex;
@@ -7641,11 +7725,11 @@ export default function App() {
 
         .jewel-top-diamond {
           position: absolute;
-          top: -9px;
+          top: -8px;
           left: 50%;
           transform: translateX(-50%);
-          width: 11px;
-          height: 11px;
+          width: 10px;
+          height: 10px;
           background: #38bdf8;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
           box-shadow: 0 0 8px #38bdf8;
@@ -7655,11 +7739,11 @@ export default function App() {
 
         .jewel-bottom-diamond {
           position: absolute;
-          bottom: -9px;
+          bottom: -8px;
           left: 50%;
           transform: translateX(-50%);
-          width: 11px;
-          height: 11px;
+          width: 10px;
+          height: 10px;
           background: #38bdf8;
           clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
           box-shadow: 0 0 8px #38bdf8;
@@ -7668,15 +7752,15 @@ export default function App() {
         }
 
         .plaque-btn {
-          margin-top: 5px;
+          margin-top: 4px;
           width: 100%;
-          max-width: 110px;
-          padding: 4px 0;
+          max-width: 100px;
+          padding: 3px 0;
           background: linear-gradient(180deg, #1f1912 0%, #0a0805 100%);
           border: 2.5px solid #ca8a04;
           border-radius: 8px;
           color: #fef08a;
-          font-size: 21px;
+          font-size: 19px;
           font-weight: 900;
           text-align: center;
           text-shadow: 0 2px 3px #000;
@@ -7698,22 +7782,22 @@ export default function App() {
             border-radius: var(--overlay-radius);
             z-index: 20;
             color: #fff;
-            padding: 26px;
-            padding-bottom: calc(var(--bottom-nav-height) + 26px);
+            padding: 22px;
+            padding-bottom: calc(var(--bottom-nav-height) + 22px);
             overflow-y: auto;
             direction: rtl;
             box-shadow: 0 18px 40px rgba(0,0,0,0.92);
             box-sizing: border-box;
-            font-size: 30px;
+            font-size: 27px;
         }
         .tab-title {
-            font-size: 44px;
+            font-size: 39px;
             font-weight: 900;
             color: #facc15;
             text-align: center;
             border-bottom: 4px solid #ca8a04;
-            padding-bottom: 16px;
-            margin-bottom: 28px;
+            padding-bottom: 14px;
+            margin-bottom: 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -7723,9 +7807,9 @@ export default function App() {
             background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
             color: #fff;
             border: 2.5px solid #ef4444;
-            border-radius: 14px;
-            padding: 10px 28px;
-            font-size: 29px;
+            border-radius: 12px;
+            padding: 8px 24px;
+            font-size: 26px;
             font-weight: 900;
             cursor: pointer;
             box-shadow: 0 3px 8px rgba(0,0,0,0.5);
@@ -7739,26 +7823,26 @@ export default function App() {
         .grid-cards {
             display: grid;
             grid-template-columns: var(--grid-columns);
-            gap: 22px;
+            gap: 20px;
         }
         .shop-card {
             background: rgba(30, 24, 18, 0.95);
             border: 2px solid #a16207;
-            border-radius: 20px;
-            padding: 24px;
+            border-radius: 18px;
+            padding: 20px;
             display: flex;
             align-items: center;
-            gap: 22px;
+            gap: 20px;
             box-shadow: 0 6px 16px rgba(0,0,0,0.55);
-            font-size: 28px;
+            font-size: 25px;
         }
         .upgrade-btn {
             background: linear-gradient(180deg, #ca8a04 0%, #a16207 100%);
             color: #fff;
             border: 2px solid #fef08a;
-            border-radius: 14px;
-            padding: 15px 30px;
-            font-size: 28px;
+            border-radius: 12px;
+            padding: 12px 26px;
+            font-size: 25px;
             cursor: pointer;
             font-weight: 900;
             text-shadow: 0 1px 2px #000;
@@ -13763,6 +13847,194 @@ export default function App() {
                     }}
                   >
                     تخطي ❌
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Post-Detonation Custom Message Modal (إرسال رسالة للشخص الذي فجرت سفنه أو ميناءه) */}
+          {postDetonationModal && postDetonationModal.isOpen && (
+            <div style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.88)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 10600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              direction: 'rtl',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
+            }}>
+              <div style={{
+                background: 'linear-gradient(180deg, #1f0a0a 0%, #0d0404 100%)',
+                border: '3px solid #ef4444',
+                borderRadius: '24px',
+                padding: '24px',
+                width: '100%',
+                maxWidth: '520px',
+                boxShadow: '0 0 45px rgba(239, 68, 68, 0.55), inset 0 1px 2px rgba(255,255,255,0.2)',
+                color: '#fff',
+                textAlign: 'center',
+                position: 'relative'
+              }}>
+                {/* Header Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 0 10px rgba(239, 68, 68, 0.8))' }}>💥</span>
+                  <h3 style={{ fontSize: '24px', fontWeight: '900', color: '#fca5a5', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}>
+                    إرسال رسالة للقبطان المفجر أسطوله
+                  </h3>
+                </div>
+
+                {/* Target Captain Info */}
+                <div style={{
+                  background: 'rgba(69, 10, 10, 0.6)',
+                  border: '1.5px solid rgba(239, 68, 68, 0.6)',
+                  borderRadius: '16px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      background: '#1e293b',
+                      border: '2px solid #ef4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px'
+                    }}>
+                      {postDetonationModal.targetPlayerAvatar || '⚓'}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '17px', fontWeight: '900', color: '#fef08a' }}>
+                        القبطان: @{postDetonationModal.targetPlayerName}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#fca5a5', fontWeight: 'bold' }}>
+                        {postDetonationModal.allDestroyed ? '🔥 تم إحراق الميناء وتدمير الأسطول كاملاً!' : '⚠️ تم إلحاق 20,000 ضرر بأسطوله!'}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '26px' }}>📡</span>
+                </div>
+
+                <p style={{ fontSize: '15px', color: '#cbd5e1', marginBottom: '12px', fontWeight: 'bold', textAlign: 'right' }}>
+                  اكتب رسالتك المباشرة أو تحذيرك للقبطان بعد تدمير سفنه:
+                </p>
+
+                {/* Quick Pirate Taunts */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                  {[
+                    '🏴‍☠️ بحذرك مرة واحدة وما بعيدها أبداً!',
+                    '🔱 استسلم لقوة ملوك الأعماق!',
+                    '🔥 هذا مصير من يقترب من مياهي الإقليمية!',
+                    '💥 رماد سفنك يغطي مياه الميناء!'
+                  ].map((taunt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setDetonationCustomMessage(taunt)}
+                      style={{
+                        background: 'rgba(30, 41, 59, 0.8)',
+                        border: '1px solid #475569',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                        color: '#e2e8f0',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#ef4444')}
+                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#475569')}
+                    >
+                      {taunt}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Message Textarea */}
+                <textarea
+                  value={detonationCustomMessage}
+                  onChange={(e) => setDetonationCustomMessage(e.target.value)}
+                  placeholder="اكتب رسالتك الخاصة أو التهديد هنا..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    background: '#0a0505',
+                    border: '2px solid rgba(239, 68, 68, 0.7)',
+                    borderRadius: '14px',
+                    color: '#fff',
+                    padding: '12px 14px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    textAlign: 'right',
+                    outline: 'none',
+                    resize: 'none',
+                    boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.8)',
+                    marginBottom: '18px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSendDetonationMessage}
+                    disabled={isSendingDetonationMessage || !detonationCustomMessage.trim()}
+                    style={{
+                      flex: 2,
+                      background: (!detonationCustomMessage.trim() || isSendingDetonationMessage)
+                        ? '#475569'
+                        : 'linear-gradient(180deg, #dc2626 0%, #991b1b 100%)',
+                      color: '#fff',
+                      border: '2px solid #f87171',
+                      borderRadius: '14px',
+                      padding: '12px 16px',
+                      fontSize: '16px',
+                      fontWeight: '900',
+                      cursor: (!detonationCustomMessage.trim() || isSendingDetonationMessage) ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 15px rgba(220, 38, 38, 0.45)',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {isSendingDetonationMessage ? 'جاري الإرسال...' : 'إرسال الرسالة للقبطان 🚀'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPostDetonationModal(null);
+                      setDetonationCustomMessage('');
+                    }}
+                    disabled={isSendingDetonationMessage}
+                    style={{
+                      flex: 1,
+                      background: '#1e293b',
+                      color: '#94a3b8',
+                      border: '1.5px solid #475569',
+                      borderRadius: '14px',
+                      padding: '12px 16px',
+                      fontSize: '15px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    تخطي ✖
                   </button>
                 </div>
               </div>

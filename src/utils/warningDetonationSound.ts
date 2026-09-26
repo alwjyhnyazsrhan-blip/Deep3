@@ -1,13 +1,11 @@
-// Warning & Detonation Cinematic Audio Engine (الصوت الملحمي المصاحب لرسالة التفجير)
-// يشمل تشغيل التسجيل الملحمي عالي الدقة:
-// "أنا وقت يلي بدي بحذر حدا، بحذرو مرة وحدة، وما عاد عيدها أبداً.. مرة وحدة! أنا بالمرة الثانية بحط وردة على قبره! لازم يكون فعلك أكبر من حكيك بكثير!"
-// مصحوباً بمؤثرات صوتية هادرة وضخمة تناسب أجواء التفجير البحري وهيبة القبطان.
+// Warning & Detonation Audio Engine (صوت الرجل الحقيقي المصاحب لرسالة التفجير)
+// تشغيل التسجيل الصوتي الحقيقي للرجل فقط ومنع أي صوت اصطناعي أو SpeechSynthesis نهائياً
 
 let activeAudioElement: HTMLAudioElement | null = null;
 
 export function playDetonationWarningVoiceAndSound() {
   try {
-    // 1. إيقاف أي صوت سابق إذا كان قيد التشغيل
+    // 1. إيقاف أي صوت سابق فوراً، وإلغاء أي صوت للذكاء الاصطناعي تماماً
     if (activeAudioElement) {
       try {
         activeAudioElement.pause();
@@ -26,8 +24,7 @@ export function playDetonationWarningVoiceAndSound() {
       }
     }
 
-    // 2. تشغيل الملف الصوتي المسجل عالي الدقة
-    let audioPlayed = false;
+    // 2. تشغيل صوت الرجل الحقيقي فقط حصراً من الملف الصوتي المسجل عالي الجودة
     try {
       const audio = new Audio('/audio/detonation_warning_voice.wav');
       audio.volume = 1.0;
@@ -35,21 +32,15 @@ export function playDetonationWarningVoiceAndSound() {
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            audioPlayed = true;
-          })
-          .catch((err) => {
-            console.warn("Direct audio playback failed or was blocked by browser policy, falling back to Web Speech:", err);
-            triggerWebSpeechFallback();
-          });
+        playPromise.catch((err) => {
+          console.warn("Direct male voice audio playback failed:", err);
+        });
       }
     } catch (err) {
       console.warn("Audio element initialization failed:", err);
-      triggerWebSpeechFallback();
     }
 
-    // 3. تشغيل مؤثرات سنث درامية تكتيكية مصاحبة (Sub-bass Tremor & Tension Synth)
+    // 3. تشغيل مؤثرات سنث درامية تكتيكية عميقة في الخلفية (Sub-bass Tremor)
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
@@ -91,34 +82,6 @@ export function playDetonationWarningVoiceAndSound() {
       }
     } catch (e) {
       // ignore web audio errors
-    }
-
-    function triggerWebSpeechFallback() {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const speechText = "أنا وقت يلي بدي بحذر حدا، بحذرو مرة واحدة، وما عاد عيدها أبداً.. مرة واحدة! أنا بالمرة الثانية بحط وردة على قبره! لازم يكون فعلك أكبر من حكيك بكثير!";
-        const utterance = new SpeechSynthesisUtterance(speechText);
-        utterance.lang = 'ar-SA';
-        utterance.rate = 0.92;
-        utterance.pitch = 0.82;
-
-        const voices = window.speechSynthesis.getVoices();
-        const arabicVoice = voices.find(v => 
-          v.lang.startsWith('ar') || 
-          v.name.toLowerCase().includes('arabic') || 
-          v.name.toLowerCase().includes('maged') || 
-          v.name.toLowerCase().includes('tariq')
-        );
-        if (arabicVoice) {
-          utterance.voice = arabicVoice;
-        }
-
-        try {
-          window.speechSynthesis.speak(utterance);
-        } catch (e) {
-          console.debug("Speech synthesis trigger error:", e);
-        }
-      }
     }
 
   } catch (err) {
