@@ -16,6 +16,15 @@ import {
   BatteryCharging
 } from 'lucide-react';
 
+export function formatCombatPower(val: number): string {
+  if (!val || isNaN(val)) return '0';
+  if (val >= 1e18) return (val / 1e18).toFixed(2).replace(/\.00$/, '') + ' Qt';
+  if (val >= 1e15) return (val / 1e15).toFixed(2).replace(/\.00$/, '') + ' Q';
+  if (val >= 1e12) return (val / 1e12).toFixed(2).replace(/\.00$/, '') + ' T';
+  if (val >= 1e9) return (val / 1e9).toFixed(2).replace(/\.00$/, '') + ' B';
+  return val.toLocaleString();
+}
+
 interface LeaderboardViewProps {
   realPlayers: any[];
   currentUser: any;
@@ -160,42 +169,24 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   return (
     <div 
-      className="tab-overlay relative w-full min-h-screen text-slate-100 flex flex-col items-center select-none overflow-x-hidden font-sans"
+      className="fixed inset-0 z-[120] w-full h-full text-slate-100 flex flex-col items-center select-none overflow-y-auto overflow-x-hidden font-sans"
       style={{
         backgroundImage: `
-          radial-gradient(ellipse at center top, rgba(7, 34, 64, 0.78) 0%, rgba(3, 15, 30, 0.94) 85%, rgba(1, 6, 14, 0.98) 100%),
+          radial-gradient(ellipse at center top, rgba(7, 34, 64, 0.88) 0%, rgba(3, 15, 30, 0.96) 85%, rgba(1, 6, 14, 0.99) 100%),
           url('/backgrounds/leaderboard_bg.jpg'),
           url('/settings_pirate_bg.jpg')
         `,
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundAttachment: 'fixed',
-        direction: 'rtl'
+        direction: 'rtl',
+        border: 'none',
+        borderRadius: 0,
+        boxShadow: 'none'
       }}
     >
-      {/* Decorative Nautical Left & Right Rope Borders */}
-      <div className="absolute top-0 right-0 bottom-0 w-6 md:w-10 pointer-events-none z-10 opacity-70"
-           style={{
-             background: 'repeating-linear-gradient(180deg, #1e1308 0px, #3d2611 16px, #1e1308 32px)',
-             borderLeft: '2.5px solid rgba(202, 138, 4, 0.5)',
-             boxShadow: 'inset -2px 0 10px rgba(0,0,0,0.85)'
-           }}>
-        <div className="absolute top-28 right-1 w-6 h-10 bg-amber-500/25 rounded-full blur-md" />
-        <div className="absolute top-96 right-1 w-6 h-10 bg-amber-500/25 rounded-full blur-md" />
-      </div>
-
-      <div className="absolute top-0 left-0 bottom-0 w-6 md:w-10 pointer-events-none z-10 opacity-70"
-           style={{
-             background: 'repeating-linear-gradient(180deg, #1e1308 0px, #3d2611 16px, #1e1308 32px)',
-             borderRight: '2.5px solid rgba(202, 138, 4, 0.5)',
-             boxShadow: 'inset 2px 0 10px rgba(0,0,0,0.85)'
-           }}>
-        <div className="absolute top-28 left-1 w-6 h-10 bg-amber-500/25 rounded-full blur-md" />
-        <div className="absolute top-96 left-1 w-6 h-10 bg-amber-500/25 rounded-full blur-md" />
-      </div>
-
       {/* Main Container - Balanced, Crisp Typography & Icons (-10% for consistency) */}
-      <div className="w-full max-w-[700px] px-3.5 pt-3 pb-28 flex flex-col items-center relative z-20">
+      <div className="w-full max-w-[720px] px-3.5 pt-4 pb-28 flex flex-col items-center relative z-20">
 
         {/* 1. TOP STATUS BAR (-10% text & icons) */}
         <div className="w-full flex items-center justify-between px-3.5 py-2 mb-3 text-sm md:text-base font-black text-sky-200 bg-slate-950/75 backdrop-blur-md rounded-2xl border-2 border-sky-900/60 shadow-xl">
@@ -521,9 +512,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-xs md:text-sm font-black text-sky-200">
-                  <Swords className="w-4.5 h-4.5 text-sky-400" />
-                  <span>{(top2.power || 0).toLocaleString()}</span>
+                <div 
+                  className="flex items-center justify-center gap-1 text-xs md:text-sm font-black text-sky-200 w-full px-1 overflow-hidden"
+                  title={(top2.power || 0).toLocaleString()}
+                >
+                  <Swords className="w-4.5 h-4.5 text-sky-400 flex-shrink-0" />
+                  <span className="truncate whitespace-nowrap">{formatCombatPower(top2.power || 0)}</span>
                 </div>
               </div>
             )}
@@ -564,9 +558,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-sm md:text-base font-black text-amber-300">
-                  <Swords className="w-5 h-5 text-amber-400" />
-                  <span>{(top1.power || 0).toLocaleString()}</span>
+                <div 
+                  className="flex items-center justify-center gap-1 text-sm md:text-base font-black text-amber-300 w-full px-1 overflow-hidden"
+                  title={(top1.power || 0).toLocaleString()}
+                >
+                  <Swords className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <span className="truncate whitespace-nowrap">{formatCombatPower(top1.power || 0)}</span>
                 </div>
               </div>
             )}
@@ -606,9 +603,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-xs md:text-sm font-black text-amber-200">
-                  <Swords className="w-4.5 h-4.5 text-amber-500" />
-                  <span>{(top3.power || 0).toLocaleString()}</span>
+                <div 
+                  className="flex items-center justify-center gap-1 text-xs md:text-sm font-black text-amber-200 w-full px-1 overflow-hidden"
+                  title={(top3.power || 0).toLocaleString()}
+                >
+                  <Swords className="w-4.5 h-4.5 text-amber-500 flex-shrink-0" />
+                  <span className="truncate whitespace-nowrap">{formatCombatPower(top3.power || 0)}</span>
                 </div>
               </div>
             )}
@@ -631,10 +631,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             }}
           >
             <div className="col-span-2 text-center">الترتيب</div>
-            <div className="col-span-3 text-right">اللاعب</div>
-            <div className="col-span-3 text-center">القبيلة</div>
+            <div className="col-span-4 text-right pr-2">اللاعب</div>
+            <div className="col-span-2 text-center">القبيلة</div>
             <div className="col-span-1 text-center">الدولة</div>
-            <div className="col-span-3 text-left pl-2">القوة الإجمالية</div>
+            <div className="col-span-3 text-center">القوة الإجمالية</div>
           </div>
 
           {/* Table Rows */}
@@ -678,7 +678,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     </div>
 
                     {/* Player Column */}
-                    <div className="col-span-3 text-right truncate pr-1">
+                    <div className="col-span-4 text-right truncate pr-2">
                       <span className={`text-xs md:text-sm font-black ${isCurrentUser ? 'text-amber-300' : 'text-slate-100'}`}>
                         {player.username}
                       </span>
@@ -686,9 +686,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     </div>
 
                     {/* Clan Column */}
-                    <div className="col-span-3 text-center truncate px-1">
+                    <div className="col-span-2 text-center truncate px-1">
                       <span className="text-[11px] md:text-xs text-sky-300 bg-sky-950/80 border border-sky-800/60 px-2 py-0.5 rounded-lg">
-                        {player.clan}
+                        {player.clan || '-'}
                       </span>
                     </div>
 
@@ -698,10 +698,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     </div>
 
                     {/* Total Power Column */}
-                    <div className="col-span-3 text-left pl-2 flex items-center justify-start gap-1">
+                    <div 
+                      className="col-span-3 flex items-center justify-center gap-1 px-1 overflow-hidden"
+                      title={(player.power || 0).toLocaleString()}
+                    >
                       <Swords className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      <span className="text-xs md:text-sm font-black text-amber-200 tracking-tight">
-                        {(player.power || 0).toLocaleString()}
+                      <span className="text-xs md:text-sm font-black text-amber-200 tracking-tight whitespace-nowrap">
+                        {formatCombatPower(player.power || 0)}
                       </span>
                     </div>
                   </div>

@@ -34,6 +34,7 @@ import ShipImage from './components/ShipImage';
 import ShipCrewMember, { CREW_VISUAL_MAP, sanitizeShipCrew } from './components/ShipCrewMember';
 import { SettingsView } from './components/SettingsView';
 import { LeaderboardView } from './components/LeaderboardView';
+import { ChatView } from './components/ChatView';
 // @ts-ignore
 import destroyedPortImg from './assets/images/destroyed_port_1784900250438.jpg';
 
@@ -10139,49 +10140,21 @@ export default function App() {
         </div>
       )}
 
-      {/* ----------------- CHAT TAB (الشات والدردشة العامة) ----------------- */}
+      {/* ----------------- CHAT TAB (الشات والدردشة العامة ملوك الأعماق) ----------------- */}
       {activeTab === 'chat' && (
-        <div className="tab-overlay" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="tab-title">
-            <span>💬 الدردشة العامة الحية (Multiplayer Chat)</span>
-            <button className="close-tab-btn" onClick={() => setActiveTab('harbor')}>إغلاق</button>
-          </div>
-
-          <div ref={chatScrollRef} style={{ flex: 1, background: '#1c1917', borderRadius: '12px', padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: '260px', maxHeight: '380px', border: '1.5px solid #78350f' }}>
-            {chatMessages.length === 0 ? (
-              <div style={{ margin: 'auto', textAlign: 'center', color: '#a8a29e', fontSize: '15px', fontWeight: 'bold', padding: '24px' }}>
-                <div style={{ fontSize: '40px', marginBottom: '8px' }}>💬</div>
-                💬 الشات العام للميناء خالٍ حالياً.<br />كن أول من يكتب رسالة للترحيب باللاعبين من جميع أنحاء العالم!
-              </div>
-            ) : (
-              chatMessages.map(msg => (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignSelf: msg.isMe ? 'flex-end' : 'flex-start', maxWidth: '85%', background: msg.isMe ? 'linear-gradient(180deg, #ca8a04 0%, #a16207 100%)' : '#292524', padding: '10px 14px', borderRadius: '14px', color: msg.isMe ? '#000' : '#fff', boxShadow: '0 3px 8px rgba(0,0,0,0.4)', border: msg.isMe ? '1.5px solid #fef08a' : '1px solid #44403c' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '900', color: msg.isMe ? '#1e1b4b' : '#facc15' }}>
-                    <span style={{ fontSize: '20px' }}>{msg.avatar}</span>
-                    <span>{msg.sender}</span>
-                    <span style={{ fontSize: '11.5px', opacity: 0.8, marginRight: 'auto' }}>{msg.time}</span>
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '700', lineHeight: '1.55', wordBreak: 'break-word', marginTop: '4px' }}>{msg.text}</div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <form onSubmit={sendChatMessage} style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-            <input 
-              type="text" 
-              placeholder="اكتب رسالة عامة ليراها جميع اللاعبين الحقيقيين..." 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              style={{ flex: 1, background: '#292524', border: '1.5px solid #ca8a04', borderRadius: '10px', padding: '12px 14px', color: '#fff', fontSize: '15px', fontWeight: 'bold', outline: 'none' }}
-            />
-            <button 
-              type="submit" 
-              style={{ background: 'linear-gradient(180deg, #ca8a04 0%, #a16207 100%)', border: '1px solid #fef08a', borderRadius: '10px', padding: '12px 24px', color: '#000', fontWeight: '900', cursor: 'pointer', fontSize: '15px', textShadow: '0 1px 2px rgba(255,255,255,0.4)', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
-              إرسال
-            </button>
-          </form>
-        </div>
+        <ChatView
+          chatMessages={chatMessages}
+          sendChatMessage={sendChatMessage}
+          chatInput={chatInput}
+          setChatInput={setChatInput}
+          currentUser={currentUser}
+          realPlayers={realPlayers}
+          onClose={() => setActiveTab('harbor')}
+          isMuted={isSfxMuted}
+          setIsMuted={setIsSfxMuted}
+          showToast={showToast}
+          friends={friends}
+        />
       )}
 
       {/* ----------------- FRIENDS TAB (قائمة الأصدقاء الحقيقيين) ----------------- */}
