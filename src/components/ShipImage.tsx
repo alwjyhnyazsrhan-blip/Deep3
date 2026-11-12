@@ -102,8 +102,34 @@ export const getShipCardRect = (level: number): CardRect => {
   }
 };
 
+export const SUBMARINE_BASIC_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_6_saudi_classic.png";
+export const SUBMARINE_UPGRADE_1_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_1_gold_saudi%20(1).png";
+export const SUBMARINE_UPGRADE_2_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_2_green_aura.png";
+export const SUBMARINE_UPGRADE_3_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_3_blue_aura.png";
+export const SUBMARINE_UPGRADE_4_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_4_pink_aura.png";
+export const SUBMARINE_UPGRADE_MAX_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_5_red_dragon.png";
+
 const getLocalShipUrl = (lvl: number): string => {
-  const safeLvl = Math.max(0, Math.min(Number(lvl) || 0, 35));
+  const num = Number(lvl) || 0;
+  if (num === 32) {
+    return SUBMARINE_BASIC_IMAGE;
+  }
+  if (num === 33) {
+    return SUBMARINE_UPGRADE_1_IMAGE;
+  }
+  if (num === 34) {
+    return SUBMARINE_UPGRADE_2_IMAGE;
+  }
+  if (num === 35) {
+    return SUBMARINE_UPGRADE_3_IMAGE;
+  }
+  if (num === 36) {
+    return SUBMARINE_UPGRADE_4_IMAGE;
+  }
+  if (num >= 37) {
+    return SUBMARINE_UPGRADE_MAX_IMAGE;
+  }
+  const safeLvl = Math.max(0, Math.min(num, 31));
   return `/ships/ship_${String(safeLvl).padStart(2, '0')}.webp`;
 };
 
@@ -140,10 +166,6 @@ const SHIP_IMAGES_1_TO_31: Record<number, string> = {
   29: '/ships/ship_29.webp',
   30: '/ships/ship_30.webp',
   31: '/ships/ship_31.webp',
-  32: '/ships/ship_32.webp',
-  33: '/ships/ship_33.webp',
-  34: '/ships/ship_34.webp',
-  35: '/ships/ship_35.webp',
 };
 
 const SHIP_SCALES: Record<number, number> = {
@@ -182,6 +204,8 @@ const SHIP_SCALES: Record<number, number> = {
   33: 1.1,
   34: 1.1,
   35: 1.1,
+  36: 1.1,
+  37: 1.1,
 };
 
 const SHIP_TRANSLATES: Record<number, string> = {
@@ -190,7 +214,7 @@ const SHIP_TRANSLATES: Record<number, string> = {
 };
 
 const ShipImage: React.FC<ShipImageProps> = ({ level, width = 140, plain = false, fill = false }) => {
-  const safeLvl = Math.max(0, Math.min(Number(level) || 0, 35));
+  const safeLvl = Math.max(0, Math.min(Number(level) || 0, 37));
   const containerHeight = plain ? width * 0.95 : width * 0.9;
   const localUrl = getLocalShipUrl(safeLvl);
   const scaleVal = SHIP_SCALES[safeLvl] || (safeLvl === 0 ? 1.0 : 1.35);
@@ -204,7 +228,7 @@ const ShipImage: React.FC<ShipImageProps> = ({ level, width = 140, plain = false
         height: fill ? '100%' : `${containerHeight}px`,
         minHeight: fill ? '100%' : `${containerHeight}px`,
         maxWidth: '100%',
-        backgroundImage: `url('${localUrl}')`,
+        backgroundImage: localUrl ? `url('${localUrl}')` : undefined,
         backgroundPosition: 'center',
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
@@ -217,10 +241,17 @@ const ShipImage: React.FC<ShipImageProps> = ({ level, width = 140, plain = false
         backgroundColor: plain ? 'transparent' : '#140c06',
         transform: `scale(${scaleVal}) translateY(${translateYVal})`,
         transformOrigin: 'center center',
-        WebkitMaskImage: plain ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
-        maskImage: plain ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        WebkitMaskImage: plain && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        maskImage: plain && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
-    />
+    >
+      {!localUrl && (
+        <span style={{ fontSize: `${Math.round(width * 0.45)}px`, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))' }}>🤿</span>
+      )}
+    </div>
   );
 };
 

@@ -133,6 +133,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
+    const msg = event.reason?.message || String(event.reason || '');
+    if (msg.includes('WebSocket') || msg.includes('closed without opened') || msg.includes('ws://') || msg.includes('wss://')) {
+      event.preventDefault();
+      return;
+    }
     console.warn('[Global Unhandled Rejection Prevented]:', event.reason);
     event.preventDefault();
   });

@@ -109,12 +109,32 @@ export const getFishHouseCapacity = (level: number): number => {
 };
 
 export const getShipCapacity = (level: number): number => {
-  const currentLvl = Math.max(1, Math.min(Number(level) || 1, 35));
+  const currentLvl = Math.max(1, Math.min(Number(level) || 1, 37));
   if (currentLvl > 31) {
-    // Extended scaling for submarines
-    return 100_000 + (currentLvl - 31) * 25_000;
+    // Extended scaling for submarines: Level 0 (32) starts at 125,000 up to Level Max (37) at 300,000
+    return 125_000 + (currentLvl - 32) * 35_000;
   }
   return SHIP_CAPACITY_BY_LEVEL[currentLvl] || 2_000;
+};
+
+export const getSubmarineDisplayTier = (level: number): string => {
+  const tier = (Number(level) || 32) - 32;
+  if (tier <= 0) return 'المستوى الأساسي 0';
+  if (tier === 1) return 'المستوى 1';
+  if (tier === 2) return 'المستوى 2';
+  if (tier === 3) return 'المستوى 3';
+  if (tier === 4) return 'المستوى 4';
+  return 'المستوى Max ⭐';
+};
+
+export const getSubmarineTag = (level: number): string => {
+  const tier = (Number(level) || 32) - 32;
+  if (tier <= 0) return 'الأساسي 0';
+  if (tier === 1) return 'المستوى 1';
+  if (tier === 2) return 'المستوى 2';
+  if (tier === 3) return 'المستوى 3';
+  if (tier === 4) return 'المستوى 4';
+  return 'Max ⭐';
 };
 
 export interface ShipData {
@@ -203,10 +223,12 @@ export const SHOP_SHIPS: ShopShipSpec[] = [
   { level: 29, name: 'سفينة أساطير البحر', subName: 'ملحمة أساطير البحر الغابرة', hook: 10485760000, cargo: 85000, heart: 104857600000, durationStr: '3h 48m', power: 209715200, armor: 209715200, fishTypes: ['الحوت الأبيض', 'الحوت الأحدب', 'حوت العنبر'], price: 8000000, emoji: '🔱', image: "/ships/ship_29.webp", rarity: 'أسطوري', description: 'سفينة حيكت حولها مئات الأساطير، تكتسح مياه المحيط بمهابة وجبروت وتجذب أندر الكائنات...' },
   { level: 30, name: 'سفينة سيد البحار', subName: 'الحاكم والمسيطر الأوحد على أعماق المحيط', hook: 20971520000, cargo: 90000, heart: 209715200000, durationStr: '3h 56m', power: 419430400, armor: 419430400, fishTypes: ['الحوت الرمادي', 'الحوت مقوس الرأس', 'الحوت الأزرق'], price: 9500000, emoji: '🌊', image: "/ships/ship_30.webp", rarity: 'أسطوري', description: 'يرتجف المحيط خوفاً من هدير محركاتها وقوتها التدميرية المطلقة وسعتها العملاقة للذهب...' },
   { level: 31, name: 'سفينة ملوك المحيط', subName: 'مفخرة ملوك المحيط الخارقة والنهائية', hook: 41943040000, cargo: 100000, heart: 419430400000, durationStr: '4h 5m', power: 838860800, armor: 838860800, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 12000000, emoji: '👑', image: "/ships/ship_31.webp", rarity: 'أسطورة', description: 'أعظم سفينة صُنعت في التاريخ، قوة دمار شامل وسعة ذهب أسطورية غير متناهية تمثل التتويج الأقصى لأي قبطان محترف للبحار السبعة الكبرى...' },
-  { level: 32, name: 'غواصة الأعماق الأسطورية 32', subName: 'الغواصة الحربية الخارقة حارسة الهاوية والأعماق السحيقة', hook: 83886080000, cargo: 125000, heart: 838860800000, durationStr: '4h 15m', power: 1677721600, armor: 1677721600, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 15000000, emoji: '🤿', image: "/ships/ship_32.webp", rarity: 'أسطورة', description: 'غواصة الأعماق السحيقة التكتيكية الفائقة، قادرة على الهبوط لأعمق نقاط البحر الميت وجمع أغلى المرجانيات والكنوز الغارقة مع صيانة ذاتية مستمرة وقوة تدميرية هائلة.' },
-  { level: 33, name: 'غواصة الأعماق الأسطورية 33', subName: 'غواصة الأعماق الأسطورية (المستوى الثاني المطور)', hook: 167772160000, cargo: 150000, heart: 1677721600000, durationStr: '4h 30m', power: 3355443200, armor: 3355443200, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 25000000, emoji: '🤿', image: "/ships/ship_33.webp", rarity: 'أسطورة', description: 'المستوى الثاني الخارق والمطور لغواصة الأعماق الأسطورية، مجهزة بهيكل معدني معزز وقوة شفط بصرية هائلة لجمع نوادر المحيط السحيق.' },
-  { level: 34, name: 'غواصة الأعماق الأسطورية 34', subName: 'غواصة الأعماق الأسطورية (المستوى الثالث المطوّر)', hook: 335544320000, cargo: 175000, heart: 3355443200000, durationStr: '4h 45m', power: 6710886400, armor: 6710886400, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 40000000, emoji: '🤿', image: "/ships/ship_34.webp", rarity: 'أسطورة', description: 'المستوى الثالث الخارق والأعظم على الإطلاق لغواصة الأعماق الأسطورية، مصفحة كلياً بالتيتانيوم المهجن مع أنظمة صيد نووية متطورة لكشف أسرار قاع المحيط.' },
-  { level: 35, name: 'غواصة الأعماق الأسطورية 35', subName: 'غواصة الأعماق الأسطورية (المستوى الرابع المطوّر)', hook: 671088640000, cargo: 200000, heart: 6710886400000, durationStr: '5h 0m', power: 13421772800, armor: 13421772800, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 60000000, emoji: '🤿', image: "/ships/ship_35.webp", rarity: 'أسطورة', description: 'المستوى الرابع الخارق والنهائي لغواصة الأعماق الأسطورية، مدمجة بنواة طاقة بلازما متكاملة وهيكل من مادة الفايرونيوم الصلبة لتحدي أقسى ظروف الجاذبية في قاع الهاوية.' }
+  { level: 32, name: 'غواصة الأعماق الأسطورية (المستوى الأساسي 0)', subName: 'الغواصة الحربية الخارقة حارسة الهاوية والأعماق السحيقة (المستوى الأساسي 0)', hook: 83886080000, cargo: 125000, heart: 838860800000, durationStr: '4h 15m', power: 1677721600, armor: 1677721600, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 15000000, emoji: '🤿', image: "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_6_saudi_classic.png", rarity: 'أسطورة', description: 'غواصة الأعماق السحيقة التكتيكية الفائقة (المستوى الأساسي 0)، قادرة على الهبوط لأعمق نقاط البحر الميت وجمع أغلى المرجانيات والكنوز الغارقة مع صيانة ذاتية مستمرة.' },
+  { level: 33, name: 'غواصة الأعماق الأسطورية (المستوى 1)', subName: 'غواصة الأعماق الأسطورية المطورة بهالة الذهب الناري (المستوى 1)', hook: 167772160000, cargo: 155000, heart: 1677721600000, durationStr: '4h 30m', power: 3355443200, armor: 3355443200, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 25000000, emoji: '🤿', image: "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_1_gold_saudi%20(1).png", rarity: 'أسطورة', description: 'المستوى الأول المطور لغواصة الأعماق الأسطورية، مجهزة بهيكل معدني معزز وهالة ذهبية متوهجة وقوة صيد مضاعفة.' },
+  { level: 34, name: 'غواصة الأعماق الأسطورية (المستوى 2)', subName: 'غواصة الأعماق الأسطورية المشعة بهالة الزمرد الأخضر (المستوى 2)', hook: 335544320000, cargo: 190000, heart: 3355443200000, durationStr: '4h 45m', power: 6710886400, armor: 6710886400, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 40000000, emoji: '🤿', image: "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_2_green_aura.png", rarity: 'أسطورة', description: 'المستوى الثاني الخارق، مشعة بهالة زمردية خضراء متوهجة ومصفحة كلياً بنواة طاقة خضراء وأنظمة صيد نووية متطورة لكشف أسرار قاع المحيط.' },
+  { level: 35, name: 'غواصة الأعماق الأسطورية (المستوى 3)', subName: 'غواصة الأعماق الأسطورية المشعة بهالة البلازما الزرقاء (المستوى 3)', hook: 671088640000, cargo: 225000, heart: 6710886400000, durationStr: '5h 0m', power: 13421772800, armor: 13421772800, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 60000000, emoji: '🤿', image: "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_3_blue_aura.png", rarity: 'أسطورة', description: 'المستوى الثالث الخارق، مشعة بهالة بلازما زرقاء ساطعة ومدمجة بنواة طاقة المحيط الأزرق العميق وهيكل فولاذي خارق لتحدي أعتى أعماق الهاوية.' },
+  { level: 36, name: 'غواصة الأعماق الأسطورية (المستوى 4)', subName: 'غواصة الأعماق الأسطورية المشعة بهالة الطاقة الوردية الخارقة (المستوى 4)', hook: 1342177280000, cargo: 260000, heart: 13421772800000, durationStr: '5h 15m', power: 26843545600, armor: 26843545600, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 90000000, emoji: '🤿', image: "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_4_pink_aura.png", rarity: 'أسطورة', description: 'المستوى الرابع الخارق، متوهجة بهالة وردية/ماجينتا نفاثة وتمتلك أنظمة دفع ذرية ورادارات سحيقة تكشف نوادر أعماق البحار وتمنح القبطان سيطرة تامة.' },
+  { level: 37, name: 'غواصة الأعماق الأسطورية (المستوى Max ⭐)', subName: 'قمة التطور المطلق - تنين الأعماق الأحمر الأسطوري الخارق (المستوى Max ⭐)', hook: 2684354560000, cargo: 300000, heart: 26843545600000, durationStr: '5h 30m', power: 53687091200, armor: 53687091200, fishTypes: ['الحوت القاتل', 'الحوت الأسطوري', 'الحوت الصيني'], price: 150000000, emoji: '🤿', image: "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_5_red_dragon.png", rarity: 'أسطورة', description: 'المستوى الأقصى والنهائي المطلق (Max ⭐) لغواصة الأعماق، مدمجة بقوة تنين الأعماق الأحمر الناري وسعة ذهب أسطورية غير مسبوقة تمثل القمة العليا والسيادة المطلقة على كافة بحار العالم.' }
 ];
 
 export interface FishHouseLevel {
@@ -371,7 +393,7 @@ export const CREW_SHOP_ITEMS: CrewMemberSpec[] = [
   {
     id: 'guide',
     title: 'مرشد السفينة',
-    desc: 'يتوقع ويوحد نوع سمك واحد تجلبه وتصطاده جميع سفن الأسطول في رحلات الصيد',
+    desc: 'يتوقع ويوجه السفينة لصيد نوع سمك محدد بدقة 100%، مع إمكانية تحديد نوع السمك المتوقع المطلوب من قائمة أسماك السفينة',
     price: 600000,
     costType: 'gold',
     icon: '🧭',
@@ -480,6 +502,16 @@ export const FISH_REWARD_DATA: Record<string, FishRewardItem> = {
   // المستوى 1
   'السردين': { fullName: 'السردين 🐟', valPerFish: 1, emoji: '🐟' },
   'سردين': { fullName: 'السردين 🐟', valPerFish: 1, emoji: '🐟' },
+  'سمك السردين': { fullName: 'سمك السردين 🐟', valPerFish: 1, emoji: '🐟' },
+  'سمك القمر': { fullName: 'سمك القمر 🐠', valPerFish: 15, emoji: '🐠' },
+  'قرش البحر': { fullName: 'قرش البحر 🦈', valPerFish: 25, emoji: '🦈' },
+  'سمك الهامور': { fullName: 'سمك الهامور 🐠', valPerFish: 7, emoji: '🐠' },
+  'سمك أبو سيف': { fullName: 'سمك أبو سيف 🗡️', valPerFish: 20, emoji: '🗡️' },
+  'الشفنين المائي': { fullName: 'الشفنين المائي 🐡', valPerFish: 22, emoji: '🐡' },
+  'عناقة البرق': { fullName: 'عناقة البرق ⚡', valPerFish: 50, emoji: '⚡' },
+  'عناقة النار': { fullName: 'عناقة النار 🔥', valPerFish: 65, emoji: '🔥' },
+  'التنين الذهبي': { fullName: 'التنين الذهبي 🐉', valPerFish: 100, emoji: '🐉' },
+  'التنين الجليدي': { fullName: 'التنين الجليدي ❄️', valPerFish: 120, emoji: '❄️' },
 
   // المستوى 2
   'الأنشوجة': { fullName: 'الأنشوجة 🐟', valPerFish: 2, emoji: '🐟' },

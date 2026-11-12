@@ -39,6 +39,14 @@
           "type": "string",
           "description": "Active server region"
         },
+        "tribeId": {
+          "type": "string",
+          "description": "ID of the tribe the user belongs to"
+        },
+        "tribeName": {
+          "type": "string",
+          "description": "Name of the tribe the user belongs to"
+        },
         "createdAt": {
           "type": "string",
           "description": "Creation timestamp"
@@ -49,12 +57,107 @@
         }
       },
       "required": ["userId"]
+    },
+    "Tribe": {
+      "title": "Tribe",
+      "description": "Clans and tribes in King of Deep",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Tribe name",
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "description": "Tribe motto and description"
+        },
+        "emblem": {
+          "type": "string",
+          "description": "Tribe icon or emoji"
+        },
+        "leaderId": {
+          "type": "string",
+          "description": "User ID of the tribe leader"
+        },
+        "leaderName": {
+          "type": "string",
+          "description": "Display name of the tribe leader"
+        },
+        "level": {
+          "type": "number",
+          "description": "Tribe level"
+        },
+        "power": {
+          "type": "number",
+          "description": "Total power points"
+        },
+        "donations": {
+          "type": "number",
+          "description": "Total gold donated"
+        },
+        "membersCount": {
+          "type": "number",
+          "description": "Number of members"
+        },
+        "members": {
+          "type": "array",
+          "description": "List of member user IDs"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["name"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Global and clan chat messages",
+      "type": "object",
+      "properties": {
+        "sender": { "type": "string" },
+        "avatar": { "type": "string" },
+        "text": { "type": "string" },
+        "time": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["text"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
       "description": "Collection storing player progress and profiles"
+    },
+    "/tribes/{tribeId}": {
+      "schema": "Tribe",
+      "description": "Collection storing clan and tribe information"
+    },
+    "/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Collection storing public and tribe chat messages"
+    },
+    "/friendRequests/{requestId}": {
+      "schema": "object",
+      "description": "Collection storing friend requests"
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": "object",
+      "description": "Collection storing support tickets"
+    },
+    "/harborEvents/{eventId}": {
+      "schema": "object",
+      "description": "Collection storing harbor events and raids"
+    },
+    "/globalNotifications/{notifId}": {
+      "schema": "object",
+      "description": "Collection storing global game notifications"
     }
   }
 }

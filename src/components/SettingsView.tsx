@@ -80,25 +80,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div 
       className="tab-overlay relative w-full min-h-screen text-slate-100 flex flex-col items-center select-none overflow-x-hidden"
       style={{
-        backgroundImage: `radial-gradient(ellipse at center, rgba(3, 15, 30, 0.50) 0%, rgba(1, 6, 15, 0.88) 100%), url('${SETTINGS_PIRATE_BG}'), url('/settings_pirate_bg.png'), url('/settings_pirate_bg.jpg')`,
+        backgroundImage: `linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 0%, rgba(2, 10, 22, 0.28) 100%), url('/settings_pirate_bg.jpg'), url('${SETTINGS_PIRATE_BG}'), url('/settings_pirate_bg.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundAttachment: 'fixed',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
         fontFamily: "'Cairo', system-ui, -apple-system, sans-serif",
-        padding: '10px 4px 50px 4px'
+        padding: '180px 4px 60px 4px'
       }}
     >
       {/* Subtle Close Button Top Left */}
       <button 
         onClick={onClose}
         aria-label="إغلاق الإعدادات"
-        className="fixed top-3 left-3 z-50 w-8 h-8 rounded-full flex items-center justify-center bg-black/75 border border-amber-500/40 text-amber-300/90 hover:text-white hover:bg-amber-600/70 shadow-xl backdrop-blur-md transition-all active:scale-90 cursor-pointer"
+        className="fixed top-6 left-5 z-50 w-8 h-8 rounded-full flex items-center justify-center bg-black/75 border border-amber-500/40 text-amber-300/90 hover:text-white hover:bg-amber-600/70 shadow-xl backdrop-blur-md transition-all active:scale-90 cursor-pointer"
       >
         <X size={16} />
       </button>
 
       {/* Main Container mirroring image_3.png exactly */}
-      <div className="w-full max-w-[430px] relative px-2 sm:px-3 flex flex-col items-center">
+      <div className="w-full max-w-[430px] relative px-2 sm:px-3 flex flex-col items-center mt-2 sm:mt-4">
 
         {/* --- LEFT SHIP MAST & HANGING AMBER LANTERN --- */}
         <div className="absolute -left-2 sm:-left-1 top-0 bottom-0 w-6 pointer-events-none z-20 flex flex-col items-center">

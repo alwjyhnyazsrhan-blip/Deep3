@@ -2,7 +2,7 @@ import React from 'react';
 import { ShipState } from '../types';
 import ShipImage from './ShipImage';
 import ShipCrewMember, { CREW_VISUAL_MAP, sanitizeShipCrew } from './ShipCrewMember';
-import { SHOP_SHIPS, GOLD_COIN_ICON, getShipDataByLevel, ShipData, SHIP_BACKGROUND_IMAGE, FISH_REWARD_DATA } from '../data';
+import { SHOP_SHIPS, GOLD_COIN_ICON, getShipDataByLevel, ShipData, SHIP_BACKGROUND_IMAGE, FISH_REWARD_DATA, getSubmarineDisplayTier, getSubmarineTag } from '../data';
 import { executeFinancialTransaction, isNetworkOnline, notifyOfflineBlocked } from '../services/financialTransaction';
 
 interface ShipWarehouseProps {
@@ -722,7 +722,7 @@ export default function ShipWarehouse({
           {SHOP_SHIPS.filter(spec => spec.level < 33).map((spec) => {
             const isSubmarineCard = spec.level === 32;
             const ownedSubmarine = isSubmarineCard 
-              ? ships.find((s) => s.exists && s.level !== undefined && s.level >= 32 && s.level <= 35)
+              ? ships.find((s) => s.exists && s.level !== undefined && s.level >= 32 && s.level <= 37)
               : null;
 
             const currentLevel = ownedSubmarine ? (ownedSubmarine.level || 32) : spec.level;
@@ -735,7 +735,7 @@ export default function ShipWarehouse({
               ? shipTowerLevel < 31
               : (spec.level > 0 && spec.level > shipTowerLevel);
             const ownedCount = isSubmarineCard
-              ? ships.filter((s) => s.exists && s.level !== undefined && s.level >= 32 && s.level <= 35).length
+              ? ships.filter((s) => s.exists && s.level !== undefined && s.level >= 32 && s.level <= 37).length
               : ships.filter((s) => s.exists && s.level === spec.level).length;
             const isOwned = ownedCount > 0;
             const isMaxOwned = ownedCount >= 3;
@@ -791,7 +791,7 @@ export default function ShipWarehouse({
                   setGold(res.newGold);
                 }
                 setShips(newShips);
-                alert(`🎉 تهانينا! تم ترقية غواصتك الأسطورية بنجاح إلى مستوى ${nextLevel - 31} (${nextSpec.name})!`);
+                alert(`🎉 تهانينا! تم ترقية غواصتك الأسطورية بنجاح إلى ${getSubmarineDisplayTier(nextLevel)} (${nextSpec.name})!`);
               }
             };
 
@@ -839,15 +839,15 @@ export default function ShipWarehouse({
                       </span>
                     )}
                     <span style={{
-                      color: '#38bdf8',
+                      color: isSubmarineCard ? '#facc15' : '#38bdf8',
                       fontWeight: '900',
                       fontSize: '13px',
-                      background: 'rgba(56, 189, 248, 0.1)',
-                      border: '1px solid #38bdf8',
+                      background: isSubmarineCard ? 'rgba(250, 204, 21, 0.15)' : 'rgba(56, 189, 248, 0.1)',
+                      border: isSubmarineCard ? '1px solid #facc15' : '1px solid #38bdf8',
                       borderRadius: '6px',
                       padding: '2px 8px'
                     }}>
-                      Lvl {currentLevel}
+                      {isSubmarineCard ? getSubmarineTag(currentLevel) : `Lvl ${currentLevel}`}
                     </span>
                   </div>
 
@@ -890,47 +890,92 @@ export default function ShipWarehouse({
                       ⭐ أقصى حد مملوك (3/3 سفن)
                     </button>
                   ) : isSubmarineCard ? (
-                    ownedSubmarine && nextSpecForUpgrade ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={handleUpgradeSubmarineDirectly}
-                          style={{
-                            background: 'linear-gradient(to bottom, #10b981, #059669)',
-                            color: '#fff',
-                            border: '2px solid #34d399',
-                            borderRadius: '10px',
-                            padding: '8px 14px',
-                            fontSize: '12px',
-                            fontWeight: '900',
-                            cursor: 'pointer',
-                            boxShadow: '0 0 15px rgba(16, 185, 129, 0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            animation: 'pulse 2s infinite'
-                          }}
-                        >
-                          <span style={{ fontSize: '16px' }}>⚡</span>
-                          ترقية لـ ليفل {nextLevelForUpgrade - 31} بـ {nextSpecForUpgrade.price.toLocaleString('ar-EG')} 🪙
-                        </button>
-                        <button
-                          onClick={() => buyShipLevel(spec)}
-                          style={{
-                            background: 'linear-gradient(to bottom, #4f46e5, #3730a3)',
-                            color: '#fff',
-                            border: '1.5px solid #818cf8',
-                            borderRadius: '10px',
-                            padding: '8px 14px',
-                            fontSize: '12px',
-                            fontWeight: '900',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)'
-                          }}
-                        >
-                          🤿 شراء غواصة أخرى ({ownedCount}/3) بـ {spec.price.toLocaleString('ar-EG')} 🪙
-                        </button>
-                      </div>
+                    ownedSubmarine ? (
+                      nextSpecForUpgrade ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={handleUpgradeSubmarineDirectly}
+                            style={{
+                              background: 'linear-gradient(to bottom, #10b981, #059669)',
+                              color: '#fff',
+                              border: '2px solid #34d399',
+                              borderRadius: '10px',
+                              padding: '8px 14px',
+                              fontSize: '12px',
+                              fontWeight: '900',
+                              cursor: 'pointer',
+                              boxShadow: '0 0 15px rgba(16, 185, 129, 0.6)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              animation: 'pulse 2s infinite'
+                            }}
+                          >
+                            <span style={{ fontSize: '16px' }}>⚡</span>
+                            ترقية إلى {getSubmarineDisplayTier(nextLevelForUpgrade)} بـ {nextSpecForUpgrade.price.toLocaleString('ar-EG')} 🪙
+                          </button>
+                          {ownedCount < 3 && (
+                            <button
+                              onClick={() => buyShipLevel(spec)}
+                              style={{
+                                background: 'linear-gradient(to bottom, #4f46e5, #3730a3)',
+                                color: '#fff',
+                                border: '1.5px solid #818cf8',
+                                borderRadius: '10px',
+                                padding: '8px 14px',
+                                fontSize: '12px',
+                                fontWeight: '900',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)'
+                              }}
+                            >
+                              🤿 شراء غواصة أخرى ({ownedCount}/3) بـ {spec.price.toLocaleString('ar-EG')} 🪙
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            disabled
+                            style={{
+                              background: 'linear-gradient(to bottom, #b45309, #78350f)',
+                              color: '#fef08a',
+                              border: '2px solid #facc15',
+                              borderRadius: '10px',
+                              padding: '8px 14px',
+                              fontSize: '12px',
+                              fontWeight: '900',
+                              cursor: 'default',
+                              boxShadow: '0 0 15px rgba(234, 179, 8, 0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <span>👑</span>
+                            <span>الغواصة في أقصى مستوى (المستوى Max ⭐)</span>
+                          </button>
+                          {ownedCount < 3 && (
+                            <button
+                              onClick={() => buyShipLevel(spec)}
+                              style={{
+                                background: 'linear-gradient(to bottom, #4f46e5, #3730a3)',
+                                color: '#fff',
+                                border: '1.5px solid #818cf8',
+                                borderRadius: '10px',
+                                padding: '8px 14px',
+                                fontSize: '12px',
+                                fontWeight: '900',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)'
+                              }}
+                            >
+                              🤿 شراء غواصة أخرى ({ownedCount}/3) بـ {spec.price.toLocaleString('ar-EG')} 🪙
+                            </button>
+                          )}
+                        </div>
+                      )
                     ) : (
                       <button
                         onClick={() => buyShipLevel(spec)}
@@ -946,7 +991,7 @@ export default function ShipWarehouse({
                           boxShadow: '0 4px 14px rgba(79, 70, 229, 0.5)'
                         }}
                       >
-                        {ownedCount > 0 ? `🤿 شراء غواصة أخرى (${ownedCount}/3) بـ ` : '🤿 شراء الغواصة بـ '}
+                        {ownedCount > 0 ? `🤿 شراء غواصة أخرى (${ownedCount}/3) بـ ` : '🤿 شراء الغواصة (المستوى الأساسي 0) بـ '}
                         {spec.price.toLocaleString('ar-EG')} 🪙
                       </button>
                     )
@@ -1016,7 +1061,7 @@ export default function ShipWarehouse({
                 <div style={{ textAlign: 'center' }}>
                   <h4 style={{ color: '#facc15', margin: '0 0 4px 0', fontSize: '18px', fontWeight: '900' }}>
                     {isSubmarineCard && ownedSubmarine
-                      ? `غواصة الأعماق الأسطورية (مستوى ${currentLevel - 31} 🤿)`
+                      ? `غواصة الأعماق الأسطورية (${getSubmarineDisplayTier(currentLevel)} 🤿)`
                       : (shipData?.name || currentSpec.name)
                     }
                   </h4>

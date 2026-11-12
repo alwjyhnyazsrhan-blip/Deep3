@@ -96,7 +96,6 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       ) as number;
       const power = calculatePlayerPower(p);
       
-      // Determine authentic username: Never use fake names like 'قبطان_الأعماق' or 'قبطان_البحار'
       const rawName = (p.username || '').trim();
       const isPlaceholder = rawName === 'قبطان_الأعماق' || rawName === 'قبطان_البحار' || rawName === 'قبطان_مجهول';
       let cleanUsername = !isPlaceholder && rawName !== '' ? rawName : '';
@@ -110,7 +109,6 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         }
       }
 
-      // Determine clan: If player has no tribe, show '-' instead of fake clan name
       const rawClan = (p.tribeName || '').trim();
       const isFakeClan = rawClan === 'أساطير الأعماق';
       const cleanClan = !isFakeClan && rawClan !== '' ? rawClan : '-';
@@ -154,7 +152,6 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       } else if (leaderboardFilter === 'xp') {
         return (b.exp || 0) - (a.exp || 0);
       } else {
-        // Default: Sort by Combat Power
         return (b.power || 0) - (a.power || 0);
       }
     });
@@ -172,56 +169,54 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       className="fixed inset-0 z-[120] w-full h-full text-slate-100 flex flex-col items-center select-none overflow-y-auto overflow-x-hidden font-sans"
       style={{
         backgroundImage: `
-          radial-gradient(ellipse at center top, rgba(7, 34, 64, 0.88) 0%, rgba(3, 15, 30, 0.96) 85%, rgba(1, 6, 14, 0.99) 100%),
+          radial-gradient(ellipse at center top, rgba(7, 34, 64, 0.92) 0%, rgba(3, 15, 30, 0.98) 85%, rgba(1, 6, 14, 1) 100%),
           url('/backgrounds/leaderboard_bg.jpg'),
           url('/settings_pirate_bg.jpg')
         `,
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundAttachment: 'fixed',
-        direction: 'rtl',
-        border: 'none',
-        borderRadius: 0,
-        boxShadow: 'none'
+        direction: 'rtl'
       }}
     >
-      {/* Main Container - Balanced, Crisp Typography & Icons (-10% for consistency) */}
-      <div className="w-full max-w-[720px] px-3.5 pt-4 pb-28 flex flex-col items-center relative z-20">
+      {/* Main Container - Scaled up, expansive, high-contrast typography */}
+      <div className="w-full max-w-[850px] px-2.5 sm:px-4 pt-3 pb-32 flex flex-col items-center relative z-20">
 
-        {/* 1. TOP STATUS BAR (-10% text & icons) */}
-        <div className="w-full flex items-center justify-between px-3.5 py-2 mb-3 text-sm md:text-base font-black text-sky-200 bg-slate-950/75 backdrop-blur-md rounded-2xl border-2 border-sky-900/60 shadow-xl">
+        {/* 1. TOP STATUS BAR (Large, Bold, High Contrast) */}
+        <div className="w-full flex items-center justify-between px-4 py-2.5 mb-3 text-base sm:text-lg font-black text-sky-200 bg-slate-950/85 backdrop-blur-md rounded-2xl border-2 border-sky-800/80 shadow-2xl">
           {/* Right side (RTL start): Coins & Diamonds */}
-          <div className="flex items-center gap-3.5">
-            <div className="flex items-center gap-1.5 bg-amber-950/60 px-2.5 py-1 rounded-xl border border-amber-500/60">
-              <span className="text-lg">🪙</span>
-              <span className="text-amber-300 font-black">{currentGold.toLocaleString()}</span>
+          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-2 bg-amber-950/80 px-3.5 py-1.5 rounded-xl border border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]">
+              <span className="text-xl">🪙</span>
+              <span className="text-amber-300 font-black text-base sm:text-lg">{currentGold.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-cyan-950/60 px-2.5 py-1 rounded-xl border border-cyan-500/60">
-              <span className="text-lg">💎</span>
-              <span className="text-cyan-300 font-black">{currentGems.toLocaleString()}</span>
+            <div className="flex items-center gap-2 bg-cyan-950/80 px-3.5 py-1.5 rounded-xl border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+              <span className="text-xl">💎</span>
+              <span className="text-cyan-300 font-black text-base sm:text-lg">{currentGems.toLocaleString()}</span>
             </div>
           </div>
 
           {/* Left side (RTL end): Signal, Bluetooth, Battery, Clock */}
-          <div className="flex items-center gap-2.5 text-xs md:text-sm text-slate-300">
-            <Wifi className="w-4.5 h-4.5 text-cyan-400" />
-            <span className="text-blue-400 font-mono text-xs">ᛒ</span>
-            <div className="flex items-center gap-1 text-emerald-400 font-mono">
-              <BatteryCharging className="w-4.5 h-4.5" />
+          <div className="flex items-center gap-3 text-sm sm:text-base text-slate-200 font-bold">
+            <Wifi className="w-5 h-5 text-cyan-400" />
+            <span className="text-blue-400 font-mono text-sm font-black">ᛒ</span>
+            <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-black">
+              <BatteryCharging className="w-5 h-5" />
               <span>2.7v</span>
             </div>
-            <span className="font-mono text-slate-200 font-bold">{currentTime}</span>
+            <span className="font-mono text-slate-100 font-black text-base">{currentTime}</span>
           </div>
         </div>
 
-        {/* 2. GRAND HEADER TITLE BANNER (-10% scaled) */}
-        <div className="relative w-full flex flex-col items-center mb-3.5">
-          <div className="relative w-full max-w-[530px] h-[126px] flex flex-col items-center justify-center rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-500/50"
-               style={{
-                 background: 'radial-gradient(circle at center, rgba(16, 68, 115, 0.92) 0%, rgba(6, 26, 48, 0.96) 75%, rgba(2, 10, 20, 0.99) 100%)',
-                 boxShadow: '0 10px 35px rgba(0,0,0,0.95), 0 0 25px rgba(234, 179, 8, 0.35)'
-               }}>
-            
+        {/* 2. GRAND HEADER TITLE BANNER (Enlarged & 3D Embossed) */}
+        <div className="relative w-full flex flex-col items-center mb-4">
+          <div 
+            className="relative w-full max-w-[620px] h-[145px] sm:h-[160px] flex flex-col items-center justify-center rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-400/80"
+            style={{
+              background: 'radial-gradient(circle at center, rgba(16, 75, 128, 0.95) 0%, rgba(6, 28, 52, 0.98) 75%, rgba(2, 10, 22, 1) 100%)',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.95), 0 0 35px rgba(234, 179, 8, 0.45)'
+            }}
+          >
             <div 
               className="absolute inset-0 opacity-40 bg-cover bg-center pointer-events-none"
               style={{ backgroundImage: `url('/backgrounds/kings_depths_banner.jpg')` }}
@@ -229,19 +224,19 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-cyan-950/40 pointer-events-none" />
 
             {/* Glowing Golden Trident & Crown Ornament */}
-            <div className="relative flex items-center justify-center gap-2.5 mb-0.5">
-              <span className="text-amber-400 text-xl drop-shadow-[0_0_10px_rgba(250,204,21,0.9)]">🔱</span>
+            <div className="relative flex items-center justify-center gap-3 mb-1">
+              <span className="text-amber-400 text-2xl drop-shadow-[0_0_12px_rgba(250,204,21,1)]">🔱</span>
               <div className="relative">
-                <Crown className="w-9 h-9 text-amber-400 filter drop-shadow-[0_0_14px_rgba(245,158,11,0.95)]" />
+                <Crown className="w-12 h-12 text-amber-400 filter drop-shadow-[0_0_18px_rgba(245,158,11,1)]" />
               </div>
-              <span className="text-amber-400 text-xl drop-shadow-[0_0_10px_rgba(250,204,21,0.9)]">🔱</span>
+              <span className="text-amber-400 text-2xl drop-shadow-[0_0_12px_rgba(250,204,21,1)]">🔱</span>
             </div>
 
             {/* Arabic Embossed 3D Title */}
             <h1 
-              className="relative text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-100 via-amber-300 to-amber-600 drop-shadow-[0_4px_6px_rgba(0,0,0,0.95)] tracking-wide"
+              className="relative text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-100 via-amber-300 to-amber-500 drop-shadow-[0_4px_8px_rgba(0,0,0,0.95)] tracking-wide"
               style={{
-                textShadow: '0 3px 6px rgba(0,0,0,0.95), 0 0 20px rgba(245,158,11,0.5)',
+                textShadow: '0 4px 8px rgba(0,0,0,0.95), 0 0 25px rgba(245,158,11,0.6)',
                 fontFamily: 'system-ui, -apple-system, sans-serif'
               }}
             >
@@ -249,91 +244,91 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             </h1>
 
             {/* English Subtitle */}
-            <div className="relative flex items-center gap-1.5 text-[11px] md:text-xs font-black tracking-widest text-amber-300/90 mt-0.5 uppercase">
-              <Anchor className="w-4 h-4 text-amber-400" />
+            <div className="relative flex items-center gap-2 text-xs sm:text-sm font-black tracking-widest text-amber-300 mt-1 uppercase">
+              <Anchor className="w-4.5 h-4.5 text-amber-400" />
               <span>✦ KINGS OF THE DEPTHS ✦</span>
-              <Anchor className="w-4 h-4 text-amber-400" />
+              <Anchor className="w-4.5 h-4.5 text-amber-400" />
             </div>
           </div>
         </div>
 
-        {/* 3. QUICK ACTION BUTTONS ROW (-10% reduction) */}
-        <div className="w-full flex items-center justify-between gap-1.5 px-1 mb-3.5 overflow-x-auto no-scrollbar py-1">
+        {/* 3. QUICK ACTION BUTTONS ROW (Enlarged with Big Icons & Crisp Text) */}
+        <div className="w-full flex items-center justify-between gap-2 px-1 mb-4 overflow-x-auto no-scrollbar py-1">
           
           {/* سوق السفن */}
           <button
             onClick={() => setActiveTab('shop')}
-            className="flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2"
+            className="flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2"
             style={{
-              background: 'linear-gradient(180deg, #103b60 0%, #071f33 100%)',
-              borderColor: 'rgba(56, 189, 248, 0.55)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)'
+              background: 'linear-gradient(180deg, #134875 0%, #07233a 100%)',
+              borderColor: 'rgba(56, 189, 248, 0.7)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.65), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-sky-900/70 border border-sky-400/50 mb-0.5">
-              <Ship className="w-6 h-6 text-sky-300 group-hover:scale-110 transition-transform" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-sky-900/80 border border-sky-400/60 mb-1">
+              <Ship className="w-7 h-7 text-sky-200 group-hover:scale-110 transition-transform" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-sky-100 whitespace-nowrap">سوق السفن</span>
+            <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow">سوق السفن</span>
           </button>
 
           {/* السمك */}
           <button
             onClick={() => setLeaderboardFilter('fish')}
-            className={`flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2 ${
-              leaderboardFilter === 'fish' ? 'ring-2 ring-cyan-400 scale-105' : ''
+            className={`flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2 ${
+              leaderboardFilter === 'fish' ? 'ring-2 ring-cyan-300 scale-105' : ''
             }`}
             style={{
               background: leaderboardFilter === 'fish' 
-                ? 'linear-gradient(180deg, #0e5a8a 0%, #07314d 100%)' 
-                : 'linear-gradient(180deg, #103b60 0%, #071f33 100%)',
-              borderColor: leaderboardFilter === 'fish' ? '#38bdf8' : 'rgba(56, 189, 248, 0.55)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)'
+                ? 'linear-gradient(180deg, #116fa9 0%, #083c5e 100%)' 
+                : 'linear-gradient(180deg, #134875 0%, #07233a 100%)',
+              borderColor: leaderboardFilter === 'fish' ? '#38bdf8' : 'rgba(56, 189, 248, 0.7)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.65), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-cyan-900/70 border border-cyan-400/50 mb-0.5">
-              <Fish className="w-6 h-6 text-cyan-300 group-hover:scale-110 transition-transform" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-cyan-900/80 border border-cyan-400/60 mb-1">
+              <Fish className="w-7 h-7 text-cyan-200 group-hover:scale-110 transition-transform" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-sky-100 whitespace-nowrap">السمك</span>
+            <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow">السمك</span>
           </button>
 
           {/* البحث */}
           <button
             onClick={() => setLeaderboardFilter(leaderboardFilter === 'search' ? 'xp' : 'search')}
-            className={`flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2 ${
-              leaderboardFilter === 'search' ? 'ring-2 ring-cyan-400 scale-105' : ''
+            className={`flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2 ${
+              leaderboardFilter === 'search' ? 'ring-2 ring-cyan-300 scale-105' : ''
             }`}
             style={{
               background: leaderboardFilter === 'search' 
-                ? 'linear-gradient(180deg, #0e5a8a 0%, #07314d 100%)' 
-                : 'linear-gradient(180deg, #103b60 0%, #071f33 100%)',
-              borderColor: leaderboardFilter === 'search' ? '#38bdf8' : 'rgba(56, 189, 248, 0.55)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)'
+                ? 'linear-gradient(180deg, #116fa9 0%, #083c5e 100%)' 
+                : 'linear-gradient(180deg, #134875 0%, #07233a 100%)',
+              borderColor: leaderboardFilter === 'search' ? '#38bdf8' : 'rgba(56, 189, 248, 0.7)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.65), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-900/70 border border-blue-400/50 mb-0.5">
-              <Search className="w-5.5 h-5.5 text-blue-300 group-hover:scale-110 transition-transform" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-blue-900/80 border border-blue-400/60 mb-1">
+              <Search className="w-6.5 h-6.5 text-blue-200 group-hover:scale-110 transition-transform" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-sky-100 whitespace-nowrap">البحث</span>
+            <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow">البحث</span>
           </button>
 
           {/* الفعاليات */}
           <button
             onClick={() => setLeaderboardFilter('events')}
-            className={`flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2 ${
+            className={`flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2 ${
               leaderboardFilter === 'events' ? 'ring-2 ring-amber-400 scale-105' : ''
             }`}
             style={{
               background: leaderboardFilter === 'events' 
-                ? 'linear-gradient(180deg, #5c3506 0%, #301b02 100%)' 
-                : 'linear-gradient(180deg, #103b60 0%, #071f33 100%)',
-              borderColor: leaderboardFilter === 'events' ? '#f59e0b' : 'rgba(56, 189, 248, 0.55)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)'
+                ? 'linear-gradient(180deg, #784507 0%, #3e2202 100%)' 
+                : 'linear-gradient(180deg, #134875 0%, #07233a 100%)',
+              borderColor: leaderboardFilter === 'events' ? '#f59e0b' : 'rgba(56, 189, 248, 0.7)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.65), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-900/70 border border-amber-400/50 mb-0.5">
-              <Scroll className="w-5.5 h-5.5 text-amber-300 group-hover:scale-110 transition-transform" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-amber-900/80 border border-amber-400/60 mb-1">
+              <Scroll className="w-6.5 h-6.5 text-amber-200 group-hover:scale-110 transition-transform" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-sky-100 whitespace-nowrap">الفعاليات</span>
+            <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow">الفعاليات</span>
           </button>
 
           {/* BOOM 💥 */}
@@ -342,77 +337,77 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               if (onOpenAttacksList) onOpenAttacksList();
               setShowBoomPopup(true);
             }}
-            className="flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2"
+            className="flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2"
             style={{
-              background: 'linear-gradient(180deg, #7f1d1d 0%, #450a0a 100%)',
+              background: 'linear-gradient(180deg, #991b1b 0%, #520909 100%)',
               borderColor: '#ef4444',
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4), inset 0 1px 2px rgba(255,255,255,0.25)'
+              boxShadow: '0 6px 16px rgba(239, 68, 68, 0.5), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-900/70 border border-red-400/60 mb-0.5 animate-pulse">
-              <Flame className="w-6 h-6 text-amber-400" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-red-900/80 border border-red-400/70 mb-1 animate-pulse">
+              <Flame className="w-7 h-7 text-amber-300" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-amber-300 whitespace-nowrap">💥 BOOM</span>
+            <span className="text-xs sm:text-sm font-black text-amber-200 whitespace-nowrap drop-shadow">💥 BOOM</span>
           </button>
 
           {/* الذهب */}
           <button
             onClick={() => setLeaderboardFilter('gold')}
-            className={`flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2 ${
+            className={`flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2 ${
               leaderboardFilter === 'gold' ? 'ring-2 ring-amber-400 scale-105' : ''
             }`}
             style={{
               background: leaderboardFilter === 'gold' 
-                ? 'linear-gradient(180deg, #633c02 0%, #381f01 100%)' 
-                : 'linear-gradient(180deg, #103b60 0%, #071f33 100%)',
-              borderColor: leaderboardFilter === 'gold' ? '#eab308' : 'rgba(56, 189, 248, 0.55)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)'
+                ? 'linear-gradient(180deg, #7c4c02 0%, #452601 100%)' 
+                : 'linear-gradient(180deg, #134875 0%, #07233a 100%)',
+              borderColor: leaderboardFilter === 'gold' ? '#eab308' : 'rgba(56, 189, 248, 0.7)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.65), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-950/70 border border-amber-400/60 mb-0.5">
-              <Coins className="w-5.5 h-5.5 text-amber-300 group-hover:scale-110 transition-transform" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-amber-950/80 border border-amber-400/70 mb-1">
+              <Coins className="w-6.5 h-6.5 text-amber-300 group-hover:scale-110 transition-transform" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-sky-100 whitespace-nowrap">الذهب</span>
+            <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow">الذهب</span>
           </button>
 
           {/* الجواهر */}
           <button
             onClick={() => setLeaderboardFilter('gems')}
-            className={`flex-1 min-w-[68px] h-[76px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-lg relative group border-2 ${
-              leaderboardFilter === 'gems' ? 'ring-2 ring-cyan-400 scale-105' : ''
+            className={`flex-1 min-w-[78px] sm:min-w-[95px] h-[90px] sm:h-[98px] flex flex-col items-center justify-center rounded-2xl transition-all transform active:scale-95 shadow-xl relative group border-2 ${
+              leaderboardFilter === 'gems' ? 'ring-2 ring-cyan-300 scale-105' : ''
             }`}
             style={{
               background: leaderboardFilter === 'gems' 
-                ? 'linear-gradient(180deg, #0e5a8a 0%, #07314d 100%)' 
-                : 'linear-gradient(180deg, #103b60 0%, #071f33 100%)',
-              borderColor: leaderboardFilter === 'gems' ? '#06b6d4' : 'rgba(56, 189, 248, 0.55)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.25)'
+                ? 'linear-gradient(180deg, #116fa9 0%, #083c5e 100%)' 
+                : 'linear-gradient(180deg, #134875 0%, #07233a 100%)',
+              borderColor: leaderboardFilter === 'gems' ? '#06b6d4' : 'rgba(56, 189, 248, 0.7)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.65), inset 0 1px 3px rgba(255,255,255,0.3)'
             }}
           >
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-cyan-950/70 border border-cyan-400/60 mb-0.5">
-              <Gem className="w-5.5 h-5.5 text-cyan-300 group-hover:scale-110 transition-transform" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-cyan-950/80 border border-cyan-400/70 mb-1">
+              <Gem className="w-6.5 h-6.5 text-cyan-300 group-hover:scale-110 transition-transform" />
             </div>
-            <span className="text-[11px] md:text-xs font-black text-sky-100 whitespace-nowrap">الجواهر</span>
+            <span className="text-xs sm:text-sm font-black text-white whitespace-nowrap drop-shadow">الجواهر</span>
           </button>
         </div>
 
-        {/* 4. DUAL TAB SWITCHER (الترتيب vs القبيلة) */}
-        <div className="w-full flex items-center justify-center gap-3.5 mb-3.5 px-2">
+        {/* 4. DUAL TAB SWITCHER (الترتيب vs القبيلة) - Big & Bold */}
+        <div className="w-full flex items-center justify-center gap-4 mb-4 px-1">
           {/* الترتيب */}
           <button
             onClick={() => setSelectedSubTab('ranking')}
-            className="flex-1 max-w-[230px] h-[52px] flex items-center justify-center gap-2.5 rounded-2xl font-black text-sm md:text-base transition-all shadow-xl border-2"
+            className="flex-1 max-w-[280px] h-[58px] sm:h-[64px] flex items-center justify-center gap-3 rounded-2xl font-black text-base sm:text-lg transition-all shadow-2xl border-2 cursor-pointer active:scale-95"
             style={{
               background: selectedSubTab === 'ranking' 
-                ? 'linear-gradient(180deg, #164e7d 0%, #0a2742 100%)'
-                : 'linear-gradient(180deg, #0d2338 0%, #05121f 100%)',
+                ? 'linear-gradient(180deg, #1c5e96 0%, #0b3052 100%)'
+                : 'linear-gradient(180deg, #0d263e 0%, #061524 100%)',
               borderColor: selectedSubTab === 'ranking' ? '#38bdf8' : '#1e3a5f',
-              color: selectedSubTab === 'ranking' ? '#fef08a' : '#94a3b8',
-              boxShadow: selectedSubTab === 'ranking' ? '0 0 18px rgba(56, 189, 248, 0.5)' : 'none'
+              color: selectedSubTab === 'ranking' ? '#fef08a' : '#cbd5e1',
+              boxShadow: selectedSubTab === 'ranking' ? '0 0 22px rgba(56, 189, 248, 0.6)' : 'none'
             }}
           >
-            <Crown className="w-6 h-6 text-amber-400" />
-            <span>الترتيب</span>
+            <Crown className="w-7 h-7 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+            <span className="drop-shadow">الترتيب</span>
           </button>
 
           {/* القبيلة */}
@@ -421,102 +416,102 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               setSelectedSubTab('clan');
               setActiveTab('tribes');
             }}
-            className="flex-1 max-w-[230px] h-[52px] flex items-center justify-center gap-2.5 rounded-2xl font-black text-sm md:text-base transition-all shadow-xl border-2"
+            className="flex-1 max-w-[280px] h-[58px] sm:h-[64px] flex items-center justify-center gap-3 rounded-2xl font-black text-base sm:text-lg transition-all shadow-2xl border-2 cursor-pointer active:scale-95"
             style={{
               background: selectedSubTab === 'clan' 
-                ? 'linear-gradient(180deg, #164e7d 0%, #0a2742 100%)'
-                : 'linear-gradient(180deg, #0d2338 0%, #05121f 100%)',
+                ? 'linear-gradient(180deg, #1c5e96 0%, #0b3052 100%)'
+                : 'linear-gradient(180deg, #0d263e 0%, #061524 100%)',
               borderColor: selectedSubTab === 'clan' ? '#38bdf8' : '#1e3a5f',
-              color: selectedSubTab === 'clan' ? '#fef08a' : '#94a3b8',
-              boxShadow: selectedSubTab === 'clan' ? '0 0 18px rgba(56, 189, 248, 0.5)' : 'none'
+              color: selectedSubTab === 'clan' ? '#fef08a' : '#cbd5e1',
+              boxShadow: selectedSubTab === 'clan' ? '0 0 22px rgba(56, 189, 248, 0.6)' : 'none'
             }}
           >
-            <Users className="w-6 h-6 text-sky-400" />
-            <span>القبيلة</span>
+            <Users className="w-7 h-7 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+            <span className="drop-shadow">القبيلة</span>
           </button>
         </div>
 
         {/* 5. SECTION TITLE BANNER (⚓ ترتيب اللاعبين ⚓) */}
-        <div className="w-full flex items-center justify-center gap-2.5 my-2.5">
-          <div className="h-0.5 flex-1 bg-gradient-to-r from-transparent via-amber-500/60 to-amber-500" />
-          <div className="flex items-center gap-2.5 px-5 py-1.5 rounded-full bg-slate-950/85 border-2 border-amber-500/70 shadow-[0_0_16px_rgba(245,158,11,0.35)]">
-            <Anchor className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg md:text-xl font-black text-amber-300 tracking-wide">
+        <div className="w-full flex items-center justify-center gap-3 my-3">
+          <div className="h-0.5 flex-1 bg-gradient-to-r from-transparent via-amber-500/80 to-amber-400" />
+          <div className="flex items-center gap-3 px-6 py-2 rounded-full bg-slate-950/90 border-2 border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+            <Anchor className="w-6 h-6 text-amber-400 drop-shadow" />
+            <h2 className="text-xl sm:text-2xl font-black text-amber-300 tracking-wide drop-shadow">
               ترتيب اللاعبين
             </h2>
-            <Anchor className="w-5 h-5 text-amber-400" />
+            <Anchor className="w-6 h-6 text-amber-400 drop-shadow" />
           </div>
-          <div className="h-0.5 flex-1 bg-gradient-to-l from-transparent via-amber-500/60 to-amber-500" />
+          <div className="h-0.5 flex-1 bg-gradient-to-l from-transparent via-amber-500/80 to-amber-400" />
         </div>
 
         {/* Search Input Box */}
         {leaderboardFilter === 'search' && (
-          <div className="w-full my-3 animate-fadeIn">
+          <div className="w-full my-3.5 animate-fadeIn">
             <div className="relative flex items-center">
-              <Search className="absolute right-4 w-6 h-6 text-cyan-400 pointer-events-none" />
+              <Search className="absolute right-4 w-7 h-7 text-cyan-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="اكتب اسم القبطان أو القبيلة للبحث الحقيقي..."
                 value={leaderboardSearchQuery}
                 onChange={(e) => setLeaderboardSearchQuery(e.target.value)}
-                className="w-full pr-12 pl-4 py-3 bg-slate-900/95 border-2 border-cyan-500/70 rounded-2xl text-white text-sm md:text-base font-bold focus:outline-none focus:border-cyan-300 placeholder-slate-400 shadow-xl"
+                className="w-full pr-14 pl-4 py-3.5 bg-slate-900/95 border-2 border-cyan-400 rounded-2xl text-white text-base sm:text-lg font-bold focus:outline-none focus:border-cyan-300 placeholder-slate-400 shadow-2xl"
               />
               {leaderboardSearchQuery && (
                 <button 
                   onClick={() => setLeaderboardSearchQuery('')}
-                  className="absolute left-4 text-slate-400 hover:text-white"
+                  className="absolute left-4 text-slate-400 hover:text-white p-1"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* 6. TOP 3 PODIUM DISPLAY */}
+        {/* 6. TOP 3 PODIUM DISPLAY (Significantly Larger & Clear) */}
         {rankedList.length > 0 ? (
-          <div className="w-full flex items-end justify-center gap-2.5 md:gap-5 my-4 pt-5 px-1">
+          <div className="w-full flex items-end justify-center gap-3 sm:gap-6 my-5 pt-6 px-1">
             
             {/* RANK #2 (Silver/Ice Blue - Left) */}
             {top2 && (
               <div 
                 onClick={() => handleOpenProfile(top2)}
-                className="flex-1 max-w-[150px] flex flex-col items-center cursor-pointer transition-transform hover:scale-105 active:scale-95 group"
+                className="flex-1 max-w-[170px] sm:max-w-[210px] flex flex-col items-center cursor-pointer transition-transform hover:scale-105 active:scale-95 group"
               >
-                <div className="relative mb-2 flex flex-col items-center">
-                  <div className="relative z-10 w-10 h-10 rounded-full bg-gradient-to-b from-sky-400 to-slate-700 border-2 border-slate-200 flex items-center justify-center shadow-lg -mb-3.5">
-                    <span className="text-white font-black text-base">2</span>
+                <div className="relative mb-2.5 flex flex-col items-center">
+                  <div className="relative z-10 w-12 h-12 rounded-full bg-gradient-to-b from-sky-400 to-slate-700 border-2 border-white flex items-center justify-center shadow-xl -mb-4">
+                    <span className="text-white font-black text-lg">2</span>
                   </div>
 
                   <div 
-                    className="w-24 h-24 md:w-26 md:h-26 rounded-2xl flex items-center justify-center p-1.5 relative shadow-xl"
+                    className="w-28 h-28 sm:w-34 sm:h-34 rounded-2xl flex items-center justify-center p-2 relative shadow-2xl"
                     style={{
-                      background: 'radial-gradient(circle, #1e3a5f 0%, #0a192b 100%)',
-                      border: '3px solid #94a3b8',
-                      boxShadow: '0 0 16px rgba(148, 163, 184, 0.45), inset 0 0 10px rgba(56, 189, 248, 0.35)'
+                      background: 'radial-gradient(circle, #22436d 0%, #0a1c30 100%)',
+                      border: '3.5px solid #cbd5e1',
+                      boxShadow: '0 0 20px rgba(203, 213, 225, 0.5), inset 0 0 12px rgba(56, 189, 248, 0.4)'
                     }}
                   >
-                    <div className="w-full h-full rounded-xl bg-slate-900/90 border border-sky-400/40 flex items-center justify-center text-3xl md:text-4xl">
-                      {top2.avatar || '🦈'}
+                    <div className="w-full h-full rounded-xl bg-slate-900/90 border border-sky-400/50 flex items-center justify-center text-4xl sm:text-5xl">
+                      {top2.avatar || '⚓'}
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-3 z-10">
-                    <Anchor className="w-5 h-5 text-slate-300 filter drop-shadow" />
+                  <div className="absolute -bottom-3.5 z-10">
+                    <Anchor className="w-6 h-6 text-slate-200 filter drop-shadow" />
                   </div>
                 </div>
 
-                <div className="w-full bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-400/70 rounded-xl py-1 px-2 text-center shadow-md mb-1">
-                  <span className="text-xs md:text-sm font-black text-slate-100 truncate block">
+                <div className="w-full bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-slate-400 rounded-xl py-1.5 px-2 text-center shadow-md mb-1.5">
+                  <span className="text-sm sm:text-base font-black text-slate-100 truncate block">
                     {top2.username}
                   </span>
                 </div>
 
                 <div 
-                  className="flex items-center justify-center gap-1 text-xs md:text-sm font-black text-sky-200 w-full px-1 overflow-hidden"
+                  className="flex items-center justify-center gap-1.5 text-sm sm:text-base font-black text-sky-200 w-full px-1 overflow-hidden"
                   title={(top2.power || 0).toLocaleString()}
                 >
-                  <Swords className="w-4.5 h-4.5 text-sky-400 flex-shrink-0" />
+                  <Swords className="w-5 h-5 text-sky-400 flex-shrink-0" />
                   <span className="truncate whitespace-nowrap">{formatCombatPower(top2.power || 0)}</span>
                 </div>
               </div>
@@ -526,43 +521,43 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             {top1 && (
               <div 
                 onClick={() => handleOpenProfile(top1)}
-                className="flex-1 max-w-[180px] flex flex-col items-center cursor-pointer transition-transform hover:scale-105 active:scale-95 -mt-4 z-10 group"
+                className="flex-1 max-w-[200px] sm:max-w-[250px] flex flex-col items-center cursor-pointer transition-transform hover:scale-105 active:scale-95 -mt-6 z-10 group"
               >
-                <div className="relative mb-2 flex flex-col items-center">
-                  <Crown className="w-9 h-9 text-amber-400 filter drop-shadow-[0_0_12px_rgba(245,158,11,0.95)] -mb-1 animate-bounce" />
-                  <div className="relative z-10 w-12 h-12 rounded-full bg-gradient-to-b from-amber-400 to-amber-700 border-2 border-amber-200 flex items-center justify-center shadow-2xl -mb-3.5">
-                    <span className="text-amber-950 font-black text-lg">1</span>
+                <div className="relative mb-2.5 flex flex-col items-center">
+                  <Crown className="w-12 h-12 text-amber-400 filter drop-shadow-[0_0_16px_rgba(245,158,11,1)] -mb-1 animate-bounce" />
+                  <div className="relative z-10 w-14 h-14 rounded-full bg-gradient-to-b from-amber-400 to-amber-700 border-2 border-amber-100 flex items-center justify-center shadow-2xl -mb-4">
+                    <span className="text-amber-950 font-black text-2xl">1</span>
                   </div>
 
                   <div 
-                    className="w-28 h-28 md:w-32 md:h-32 rounded-2xl flex items-center justify-center p-1.5 relative shadow-2xl"
+                    className="w-34 h-34 sm:w-42 sm:h-42 rounded-3xl flex items-center justify-center p-2 relative shadow-2xl"
                     style={{
-                      background: 'radial-gradient(circle, #3b2204 0%, #150a01 100%)',
-                      border: '3.5px solid #facc15',
-                      boxShadow: '0 0 22px rgba(250, 204, 21, 0.55), inset 0 0 12px rgba(250, 204, 21, 0.35)'
+                      background: 'radial-gradient(circle, #482903 0%, #1a0c01 100%)',
+                      border: '4px solid #facc15',
+                      boxShadow: '0 0 30px rgba(250, 204, 21, 0.7), inset 0 0 16px rgba(250, 204, 21, 0.45)'
                     }}
                   >
-                    <div className="w-full h-full rounded-xl bg-slate-950/90 border border-amber-400/60 flex items-center justify-center text-4xl md:text-5xl">
-                      {top1.avatar || '👑'}
+                    <div className="w-full h-full rounded-2xl bg-slate-950/90 border-2 border-amber-400/80 flex items-center justify-center text-5xl sm:text-6xl">
+                      {top1.avatar || '⚓'}
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-3.5 z-10">
-                    <Anchor className="w-6 h-6 text-amber-400 filter drop-shadow-[0_0_8px_rgba(245,158,11,0.85)]" />
+                  <div className="absolute -bottom-4 z-10">
+                    <Anchor className="w-7 h-7 text-amber-400 filter drop-shadow-[0_0_10px_rgba(245,158,11,1)]" />
                   </div>
                 </div>
 
-                <div className="w-full bg-gradient-to-b from-amber-950/95 to-slate-950 border-2 border-amber-400 rounded-xl py-1 px-2 text-center shadow-xl mb-1">
-                  <span className="text-sm md:text-base font-black text-amber-200 truncate block">
+                <div className="w-full bg-gradient-to-b from-amber-950 to-slate-950 border-2 border-amber-400 rounded-xl py-1.5 px-2.5 text-center shadow-2xl mb-1.5">
+                  <span className="text-base sm:text-lg font-black text-amber-200 truncate block">
                     {top1.username}
                   </span>
                 </div>
 
                 <div 
-                  className="flex items-center justify-center gap-1 text-sm md:text-base font-black text-amber-300 w-full px-1 overflow-hidden"
+                  className="flex items-center justify-center gap-1.5 text-base sm:text-lg font-black text-amber-300 w-full px-1 overflow-hidden"
                   title={(top1.power || 0).toLocaleString()}
                 >
-                  <Swords className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <Swords className="w-6 h-6 text-amber-400 flex-shrink-0 drop-shadow" />
                   <span className="truncate whitespace-nowrap">{formatCombatPower(top1.power || 0)}</span>
                 </div>
               </div>
@@ -572,42 +567,42 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             {top3 && (
               <div 
                 onClick={() => handleOpenProfile(top3)}
-                className="flex-1 max-w-[150px] flex flex-col items-center cursor-pointer transition-transform hover:scale-105 active:scale-95 group"
+                className="flex-1 max-w-[170px] sm:max-w-[210px] flex flex-col items-center cursor-pointer transition-transform hover:scale-105 active:scale-95 group"
               >
-                <div className="relative mb-2 flex flex-col items-center">
-                  <div className="relative z-10 w-10 h-10 rounded-full bg-gradient-to-b from-amber-600 to-orange-950 border-2 border-amber-300 flex items-center justify-center shadow-lg -mb-3.5">
-                    <span className="text-amber-100 font-black text-base">3</span>
+                <div className="relative mb-2.5 flex flex-col items-center">
+                  <div className="relative z-10 w-12 h-12 rounded-full bg-gradient-to-b from-amber-600 to-orange-950 border-2 border-amber-300 flex items-center justify-center shadow-xl -mb-4">
+                    <span className="text-amber-100 font-black text-lg">3</span>
                   </div>
 
                   <div 
-                    className="w-24 h-24 md:w-26 md:h-26 rounded-2xl flex items-center justify-center p-1.5 relative shadow-xl"
+                    className="w-28 h-28 sm:w-34 sm:h-34 rounded-2xl flex items-center justify-center p-2 relative shadow-2xl"
                     style={{
-                      background: 'radial-gradient(circle, #3d1405 0%, #170701 100%)',
-                      border: '3px solid #b45309',
-                      boxShadow: '0 0 16px rgba(180, 83, 9, 0.45), inset 0 0 10px rgba(249, 115, 22, 0.35)'
+                      background: 'radial-gradient(circle, #451705 0%, #1a0801 100%)',
+                      border: '3.5px solid #d97706',
+                      boxShadow: '0 0 20px rgba(217, 119, 6, 0.5), inset 0 0 12px rgba(249, 115, 22, 0.4)'
                     }}
                   >
-                    <div className="w-full h-full rounded-xl bg-slate-900/90 border border-amber-600/50 flex items-center justify-center text-3xl md:text-4xl">
-                      {top3.avatar || '🐉'}
+                    <div className="w-full h-full rounded-xl bg-slate-900/90 border border-amber-500/60 flex items-center justify-center text-4xl sm:text-5xl">
+                      {top3.avatar || '⚓'}
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-3 z-10">
-                    <Anchor className="w-5 h-5 text-amber-600 filter drop-shadow" />
+                  <div className="absolute -bottom-3.5 z-10">
+                    <Anchor className="w-6 h-6 text-amber-500 filter drop-shadow" />
                   </div>
                 </div>
 
-                <div className="w-full bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-600/70 rounded-xl py-1 px-2 text-center shadow-md mb-1">
-                  <span className="text-xs md:text-sm font-black text-amber-100 truncate block">
+                <div className="w-full bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-600 rounded-xl py-1.5 px-2 text-center shadow-md mb-1.5">
+                  <span className="text-sm sm:text-base font-black text-amber-100 truncate block">
                     {top3.username}
                   </span>
                 </div>
 
                 <div 
-                  className="flex items-center justify-center gap-1 text-xs md:text-sm font-black text-amber-200 w-full px-1 overflow-hidden"
+                  className="flex items-center justify-center gap-1.5 text-sm sm:text-base font-black text-amber-200 w-full px-1 overflow-hidden"
                   title={(top3.power || 0).toLocaleString()}
                 >
-                  <Swords className="w-4.5 h-4.5 text-amber-500 flex-shrink-0" />
+                  <Swords className="w-5 h-5 text-amber-500 flex-shrink-0" />
                   <span className="truncate whitespace-nowrap">{formatCombatPower(top3.power || 0)}</span>
                 </div>
               </div>
@@ -615,19 +610,19 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
           </div>
         ) : (
-          <div className="w-full py-7 text-center bg-slate-950/70 border border-sky-900/50 rounded-2xl my-3.5 px-4 text-slate-300 font-bold text-sm md:text-base">
+          <div className="w-full py-8 text-center bg-slate-950/80 border-2 border-sky-800 rounded-2xl my-4 px-4 text-slate-200 font-black text-base sm:text-lg">
             لا توجد حسابات أو لاعبين مسجلين في هذا الترتيب حالياً. كن أول قبطان يعتلي الصدارة! ⚓
           </div>
         )}
 
-        {/* 7. LEADERBOARD TABLE */}
-        <div className="w-full flex flex-col rounded-2xl overflow-hidden border-2 border-sky-800/60 shadow-2xl backdrop-blur-md mb-4 bg-slate-950/80">
+        {/* 7. LEADERBOARD TABLE (Enlarged Rows & Big Clear Text) */}
+        <div className="w-full flex flex-col rounded-2xl overflow-hidden border-2 border-sky-700/80 shadow-2xl backdrop-blur-md mb-5 bg-slate-950/90">
           
           {/* Table Header Row */}
           <div 
-            className="w-full grid grid-cols-12 items-center px-3.5 py-2.5 text-xs md:text-sm font-black text-sky-200 border-b-2 border-sky-800/60"
+            className="w-full grid grid-cols-12 items-center px-4 py-3.5 text-base sm:text-lg font-black text-sky-100 border-b-2 border-sky-700/80"
             style={{
-              background: 'linear-gradient(90deg, #092542 0%, #06182a 100%)'
+              background: 'linear-gradient(90deg, #0d3257 0%, #08223c 100%)'
             }}
           >
             <div className="col-span-2 text-center">الترتيب</div>
@@ -638,9 +633,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           </div>
 
           {/* Table Rows */}
-          <div className="w-full flex flex-col divide-y divide-sky-900/40 max-h-[440px] overflow-y-auto no-scrollbar">
+          <div className="w-full flex flex-col divide-y-2 divide-sky-950 max-h-[500px] overflow-y-auto no-scrollbar">
             {rankedList.length === 0 ? (
-              <div className="w-full py-7 text-center text-slate-400 font-bold text-sm md:text-base">
+              <div className="w-full py-8 text-center text-slate-300 font-black text-base sm:text-lg">
                 لا توجد نتائج مطابقة لبحثك في قاعدة البيانات الحقيقية.
               </div>
             ) : (
@@ -652,58 +647,58 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   <div
                     key={player.id || index}
                     onClick={() => handleOpenProfile(player)}
-                    className={`w-full grid grid-cols-12 items-center px-3.5 py-2.5 text-xs md:text-sm font-bold transition-all cursor-pointer hover:bg-sky-950/50 active:scale-[0.99] ${
-                      isCurrentUser ? 'bg-amber-950/40 border-r-4 border-amber-400' : ''
+                    className={`w-full grid grid-cols-12 items-center px-3.5 py-3.5 text-base sm:text-lg font-bold transition-all cursor-pointer hover:bg-sky-950/70 active:scale-[0.99] ${
+                      isCurrentUser ? 'bg-amber-950/50 border-r-4 border-amber-400' : ''
                     }`}
                     style={{
-                      background: index % 2 === 0 ? 'rgba(5, 20, 36, 0.65)' : 'rgba(3, 13, 24, 0.8)'
+                      background: index % 2 === 0 ? 'rgba(6, 24, 44, 0.75)' : 'rgba(3, 15, 28, 0.9)'
                     }}
                   >
                     {/* Rank Column */}
-                    <div className="col-span-2 flex items-center justify-center gap-1.5">
+                    <div className="col-span-2 flex items-center justify-center gap-2">
                       <div 
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs md:text-sm font-black shadow-md ${
-                          rank === 1 ? 'bg-amber-400 text-amber-950 border border-amber-200' :
-                          rank === 2 ? 'bg-slate-300 text-slate-900 border border-white' :
-                          rank === 3 ? 'bg-amber-700 text-amber-100 border border-amber-400' :
-                          'bg-slate-800 text-sky-200 border border-slate-700'
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg font-black shadow-md ${
+                          rank === 1 ? 'bg-amber-400 text-amber-950 border-2 border-amber-200' :
+                          rank === 2 ? 'bg-slate-200 text-slate-900 border-2 border-white' :
+                          rank === 3 ? 'bg-amber-700 text-amber-100 border-2 border-amber-400' :
+                          'bg-slate-800 text-sky-200 border border-slate-600'
                         }`}
                       >
                         {rank}
                       </div>
 
-                      <div className="w-7 h-7 rounded-full bg-slate-900/90 border border-sky-600/50 flex items-center justify-center text-sm">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-900/95 border-2 border-sky-500/70 flex items-center justify-center text-xl">
                         {player.avatar || '⚓'}
                       </div>
                     </div>
 
                     {/* Player Column */}
                     <div className="col-span-4 text-right truncate pr-2">
-                      <span className={`text-xs md:text-sm font-black ${isCurrentUser ? 'text-amber-300' : 'text-slate-100'}`}>
+                      <span className={`text-base sm:text-lg font-black ${isCurrentUser ? 'text-amber-300' : 'text-slate-100'}`}>
                         {player.username}
                       </span>
-                      {isCurrentUser && <span className="mr-1 text-[11px] text-amber-400 font-extrabold">(أنت)</span>}
+                      {isCurrentUser && <span className="mr-1.5 text-xs sm:text-sm text-amber-400 font-extrabold">(أنت)</span>}
                     </div>
 
                     {/* Clan Column */}
                     <div className="col-span-2 text-center truncate px-1">
-                      <span className="text-[11px] md:text-xs text-sky-300 bg-sky-950/80 border border-sky-800/60 px-2 py-0.5 rounded-lg">
+                      <span className="text-xs sm:text-sm text-sky-200 bg-sky-950 border border-sky-600/70 px-3 py-1 rounded-lg font-black">
                         {player.clan || '-'}
                       </span>
                     </div>
 
                     {/* Country Column */}
-                    <div className="col-span-1 text-center text-base md:text-lg">
+                    <div className="col-span-1 text-center text-2xl">
                       {player.country || '🇸🇦'}
                     </div>
 
                     {/* Total Power Column */}
                     <div 
-                      className="col-span-3 flex items-center justify-center gap-1 px-1 overflow-hidden"
+                      className="col-span-3 flex items-center justify-center gap-1.5 px-1 overflow-hidden"
                       title={(player.power || 0).toLocaleString()}
                     >
-                      <Swords className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      <span className="text-xs md:text-sm font-black text-amber-200 tracking-tight whitespace-nowrap">
+                      <Swords className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                      <span className="text-base sm:text-lg font-black text-amber-300 tracking-tight whitespace-nowrap drop-shadow">
                         {formatCombatPower(player.power || 0)}
                       </span>
                     </div>
@@ -715,31 +710,32 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
           {/* Table Footer */}
           <div 
-            className="w-full flex items-center justify-center gap-2 py-2 text-[11px] md:text-xs font-black text-amber-300/90 border-t-2 border-sky-800/60"
+            className="w-full flex items-center justify-center gap-2.5 py-3 text-sm sm:text-base font-black text-amber-300 border-t-2 border-sky-700/80"
             style={{
-              background: 'linear-gradient(90deg, #06182a 0%, #092542 50%, #06182a 100%)'
+              background: 'linear-gradient(90deg, #071f37 0%, #0d3358 50%, #071f37 100%)'
             }}
           >
-            <Anchor className="w-4.5 h-4.5 text-amber-400" />
+            <Anchor className="w-5 h-5 text-amber-400" />
             <span>يتم تحديث الترتيب الحقيقي تلقائياً مع حركة السفن والذهب</span>
-            <Anchor className="w-4.5 h-4.5 text-amber-400" />
+            <Anchor className="w-5 h-5 text-amber-400" />
           </div>
         </div>
 
-        {/* 8. CLOSE AND RETURN BUTTON */}
-        <div className="w-full flex items-center justify-center px-1 mb-2 mt-1.5">
+        {/* 8. CLOSE AND RETURN BUTTON (Prominent & Easy to Click) */}
+        <div className="w-full flex items-center justify-center px-1 mb-2 mt-2">
           <button
             onClick={() => setActiveTab('harbor')}
-            className="w-full py-3.5 px-6 rounded-2xl font-black text-sm md:text-base shadow-2xl border-2 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2.5"
+            className="w-full py-4 px-6 rounded-2xl font-black text-base sm:text-lg shadow-2xl border-2 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-3"
             style={{
-              background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-              borderColor: '#64748b',
-              color: '#f1f5f9',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.7)'
+              background: 'linear-gradient(180deg, #1e3a5f 0%, #0f1f33 100%)',
+              borderColor: '#38bdf8',
+              color: '#ffffff',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.8), 0 0 15px rgba(56, 189, 248, 0.4)'
             }}
           >
+            <Anchor className="w-6 h-6 text-amber-400" />
             <span>إغلاق والعودة للميناء</span>
-            <Anchor className="w-5 h-5 text-amber-400" />
+            <Anchor className="w-6 h-6 text-amber-400" />
           </button>
         </div>
 
@@ -760,30 +756,30 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           >
             <div className="flex items-center justify-between mb-4 border-b-2 border-red-900/60 pb-3">
               <div className="flex items-center gap-3">
-                <Flame className="w-7 h-7 text-red-500 animate-pulse" />
-                <h3 className="text-lg md:text-xl font-black text-red-400">سجل هجمات BOOM التكتيكية</h3>
+                <Flame className="w-8 h-8 text-red-500 animate-pulse" />
+                <h3 className="text-xl font-black text-red-400">سجل هجمات BOOM التكتيكية</h3>
               </div>
               <button 
                 onClick={() => setShowBoomPopup(false)}
                 className="text-slate-400 hover:text-white p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-7 h-7" />
               </button>
             </div>
 
-            <div className="space-y-3 text-sm md:text-base">
+            <div className="space-y-3.5 text-base">
               {currentUser?.battleReports && currentUser.battleReports.length > 0 ? (
                 currentUser.battleReports.slice(0, 5).map((report: any, idx: number) => (
-                  <div key={idx} className="p-3.5 rounded-xl bg-red-950/50 border border-red-800/50 text-slate-200">
+                  <div key={idx} className="p-4 rounded-xl bg-red-950/60 border border-red-800 text-slate-200">
                     <div className="flex justify-between font-black text-red-300 mb-1">
                       <span>{report.title || '💥 غارة بحرية'}</span>
                       <span className="text-xs text-slate-400">{report.time || 'مؤخراً'}</span>
                     </div>
-                    <div className="text-xs md:text-sm">{report.description || report.message}</div>
+                    <div className="text-sm sm:text-base">{report.description || report.message}</div>
                   </div>
                 ))
               ) : (
-                <div className="p-4 rounded-xl bg-red-950/30 border border-red-800/40 text-center text-slate-300 font-bold text-sm">
+                <div className="p-5 rounded-xl bg-red-950/40 border border-red-800 text-center text-slate-200 font-bold text-base">
                   لا توجد هجمات تكتيكية مسجلة على أسطولك حتى الآن. الميناء آمن! 🛡️
                 </div>
               )}
@@ -791,7 +787,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
             <button
               onClick={() => setShowBoomPopup(false)}
-              className="w-full mt-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-base shadow-lg"
+              className="w-full mt-5 py-3.5 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-lg shadow-lg active:scale-95"
             >
               إغلاق السجل
             </button>

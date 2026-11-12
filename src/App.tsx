@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { ShipState, ChatMessage, Tribe, CrewMember, Quest, BattleReport, GlobalNotification, NotificationEventType } from './types';
-import { SHOP_SHIPS, FISH_REWARD_DATA, getHarborImageUrl, FISH_HOUSE_LEVELS, getFishHouseImageUrl, getFishHouseCapacity, getShipCapacity, GOLD_COIN_ICON, GEM_ICON, WAREHOUSE_BG, WEAPON_SMALL_MISSILE_ICON, WEAPON_SMALL_MISSILE_BG, WEAPON_MEDIUM_MISSILE_ICON, WEAPON_MEDIUM_MISSILE_BG, WEAPON_LARGE_MISSILE_ICON, WEAPON_LARGE_MISSILE_BG, WEAPON_MEDIA_BOMB_ICON, WEAPON_MEDIA_BOMB_BG, WEAPON_ATOMIC_BOMB_ICON, WEAPON_ATOMIC_BOMB_BG, SHIP_GUARDIAN_ICON, SHIP_GUARDIAN_BG, FIXER_SMALL_ICON, FIXER_SMALL_BG, FIXER_MEDIUM_ICON, FIXER_MEDIUM_BG, FIXER_LARGE_ICON, FIXER_LARGE_BG, FIXER_LEGENDARY_ICON, FIXER_LEGENDARY_BG, SAILOR_ICON, SAILOR_BG, GOLDEN_HUNTER_ICON, GOLDEN_HUNTER_BG, MARKET_EXPERT_ICON, MARKET_EXPERT_BG, LUCK_PIRATE_ICON, LUCK_PIRATE_BG, SHIP_PILOT_ICON, SHIP_PILOT_BG, SHIP_THIEF_ICON, SHIP_THIEF_BG, CREW_SHOP_ITEMS, WEAPONS_DATA } from './data';
+import { SHOP_SHIPS, FISH_REWARD_DATA, getHarborImageUrl, FISH_HOUSE_LEVELS, getFishHouseImageUrl, getFishHouseCapacity, getShipCapacity, getSubmarineDisplayTier, getSubmarineTag, GOLD_COIN_ICON, GEM_ICON, WAREHOUSE_BG, WEAPON_SMALL_MISSILE_ICON, WEAPON_SMALL_MISSILE_BG, WEAPON_MEDIUM_MISSILE_ICON, WEAPON_MEDIUM_MISSILE_BG, WEAPON_LARGE_MISSILE_ICON, WEAPON_LARGE_MISSILE_BG, WEAPON_MEDIA_BOMB_ICON, WEAPON_MEDIA_BOMB_BG, WEAPON_ATOMIC_BOMB_ICON, WEAPON_ATOMIC_BOMB_BG, SHIP_GUARDIAN_ICON, SHIP_GUARDIAN_BG, FIXER_SMALL_ICON, FIXER_SMALL_BG, FIXER_MEDIUM_ICON, FIXER_MEDIUM_BG, FIXER_LARGE_ICON, FIXER_LARGE_BG, FIXER_LEGENDARY_ICON, FIXER_LEGENDARY_BG, SAILOR_ICON, SAILOR_BG, GOLDEN_HUNTER_ICON, GOLDEN_HUNTER_BG, MARKET_EXPERT_ICON, MARKET_EXPERT_BG, LUCK_PIRATE_ICON, LUCK_PIRATE_BG, SHIP_PILOT_ICON, SHIP_PILOT_BG, SHIP_THIEF_ICON, SHIP_THIEF_BG, CREW_SHOP_ITEMS, WEAPONS_DATA } from './data';
 import FishHouseComponent from './components/FishHouseComponent';
 import GoogleAccountSelector from './components/GoogleAccountSelector';
 import LandingScreen from './components/LandingScreen';
@@ -35,6 +35,9 @@ import ShipCrewMember, { CREW_VISUAL_MAP, sanitizeShipCrew } from './components/
 import { SettingsView } from './components/SettingsView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { ChatView } from './components/ChatView';
+import TribeView from './components/TribeView';
+import WarLogModal, { AttackLogItem, SupportGiftItem } from './components/WarLogModal';
+import { ShipWorkshopModal } from './components/ShipWorkshopModal';
 // @ts-ignore
 import destroyedPortImg from './assets/images/destroyed_port_1784900250438.jpg';
 
@@ -620,7 +623,7 @@ export default function App() {
 
   // --- Active Tab ---
   const [activeTab, setActiveTab] = useState<'harbor' | 'battle' | 'shop' | 'tribes' | 'chat' | 'leaderboard' | 'reports' | 'settings' | 'inventory' | 'warehouse' | 'friends'>('harbor');
-  const [shopSubTab, setShopSubTab] = useState<'recharge' | 'backgrounds' | 'vip' | 'share' | 'crew_services' | 'hamour' | 'defense' | 'thihn'>('recharge');
+  const [shopSubTab, setShopSubTab] = useState<'recharge' | 'backgrounds' | 'share' | 'crew_services' | 'hamour' | 'defense' | 'thihn'>('recharge');
   const [shopBoard, setShopBoard] = useState<'board1' | 'board2'>('board1');
   const [shopSubFilter, setShopSubFilter] = useState<'all' | 'offers' | 'gems' | 'gold' | 'crew' | 'weapons' | 'shields' | 'bundles'>('all');
   const [payingItem, setPayingItem] = useState<any | null>(null);
@@ -802,9 +805,16 @@ export default function App() {
   // --- Real Multiplayer Friends & Tribe States ---
   const [friends, setFriends] = useState<string[]>([]);
   const [friendRequests, setFriendRequests] = useState<any[]>([]);
-  const [tribeId, setTribeId] = useState<string>('');
-  const [tribeName, setTribeName] = useState<string>('');
-  const [tribes, setTribes] = useState<any[]>([]);
+  const [tribeId, setTribeId] = useState<string>(() => localStorage.getItem('pirate_tribe_id') || '');
+  const [tribeName, setTribeName] = useState<string>(() => localStorage.getItem('pirate_tribe_name') || '');
+  const [tribes, setTribes] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('pirate_local_tribes');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showCreateTribeModal, setShowCreateTribeModal] = useState(false);
   const [newTribeName, setNewTribeName] = useState('');
   const [newTribeDesc, setNewTribeDesc] = useState('');
@@ -818,10 +828,46 @@ export default function App() {
     { id: 'q3', title: 'دعم التحالف الحليف', target: 'تبرع للتحالف بـ 50 ذهب', progress: 0, max: 50, rewardGold: 80, rewardGems: 1, completed: false, claimed: false },
   ]);
 
-  // --- Battle Reports State ---
+  // --- Battle Reports State (Real gameplay data only) ---
   const [battleReports, setBattleReports] = useState<BattleReport[]>(() => {
-    const saved = localStorage.getItem('pirate_battle_reports');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('pirate_battle_reports');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) 
+          ? parsed.filter((r: any) => r.opponentName && r.opponentName !== 'قبطان معادٍ' && !r.id?.startsWith('mock_'))
+          : [];
+      }
+    } catch {}
+    return [];
+  });
+
+  // --- War & Revenge Log (سجل الغارات والانتقام والدعوم - بيانات حقيقية 100% فقط) ---
+  const [showWarLogModal, setShowWarLogModal] = useState<boolean>(false);
+  const [attackLogs, setAttackLogs] = useState<AttackLogItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('pirate_attack_logs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed)
+          ? parsed.filter((a: any) => a.id && !a.id.startsWith('atk-') && a.attackerName !== 'رماس محمد' && a.attackerName !== 'الكابتن صقر')
+          : [];
+      }
+    } catch {}
+    return [];
+  });
+
+  const [supportGifts, setSupportGifts] = useState<SupportGiftItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('pirate_support_gifts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed)
+          ? parsed.filter((g: any) => g.id && !g.id.startsWith('gift-') && g.senderName !== 'القبطان سيف' && g.senderName !== 'القبطانة ريم' && g.senderName !== 'تحالف ملوك الأعماق')
+          : [];
+      }
+    } catch {}
+    return [];
   });
 
   // --- Real-time Real Players (Multiplayer) ---
@@ -2200,6 +2246,98 @@ export default function App() {
     }, 400);
   };
 
+  // --- Revenge & Counter-Attack Logic (نظام رد الهجوم والانتقام الفوري في محيط المهاجم) ---
+  const handleRevenge = (attackerName: string, attackId?: string) => {
+    // 1. Mark as avenged in attack logs
+    setAttackLogs(prev => {
+      const updated = prev.map(a => 
+        (attackId && a.id === attackId) || a.attackerName === attackerName 
+          ? { ...a, isAvenged: true } 
+          : a
+      );
+      try { localStorage.setItem('pirate_attack_logs', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+
+    // 2. Close modal & dismiss banner
+    setShowWarLogModal(false);
+    handleDismissNotification();
+
+    // 3. Find or construct attacker's profile
+    let target = realPlayers.find(p => p.username === attackerName || p.displayName === attackerName);
+    if (!target) {
+      target = {
+        id: 'rival_' + attackerName,
+        userId: 'rival_' + attackerName,
+        username: attackerName,
+        displayName: attackerName,
+        avatar: '/assets/chat_avatar_2.png',
+        gold: 15000000,
+        gems: 850,
+        shipTowerLevel: 28,
+        fishStorageLevel: 12,
+        server: 'سيرفر الأسطورة 1',
+        pirateClass: 'قرصان الأعماق المهاجم',
+        portDestroyed: false,
+        ships: [
+          { id: 'rs1', name: 'سفينة الظل الحربية', level: 6, heart: 16000, maxHeart: 16000, left: '20%', top: '35%', scaleX: 1, moving: false, exists: true, crewPower: 800, hasNetUpgrade: true, hasEngineUpgrade: true, status: 'docked' },
+          { id: 'rs2', name: 'غواصة الأعماق 3', level: 3, heart: 24000, maxHeart: 24000, left: '60%', top: '45%', scaleX: 1, moving: false, exists: true, crewPower: 1200, hasNetUpgrade: true, hasEngineUpgrade: true, status: 'docked' },
+        ]
+      };
+    }
+
+    // 4. Open their profile and ocean directly in visit / attack mode ("على طول تروح محيطها تفجرها")
+    setActiveTab('harbor');
+    setIsProfileLoading(true);
+    setInspectedPlayer(target);
+    setTimeout(() => {
+      setIsProfileLoading(false);
+      setInspectedPlayerShipVisit(true);
+      showToast(`⚔️ تم الانتقال فوراً إلى محيط @${attackerName}! اقصف سفنها بالصواريخ والأسلحة الآن لتفجيرها والانتقام لمينائك! 💥`, 'success');
+      playDetonationWarningVoiceAndSound();
+    }, 350);
+  };
+
+  // --- Claim Support Gifts Logic (استلام الطواقم والصناديق الأسطورية) ---
+  const handleClaimGift = (gift: SupportGiftItem) => {
+    setSupportGifts(prev => {
+      const updated = prev.map(g => g.id === gift.id ? { ...g, claimed: true } : g);
+      try { localStorage.setItem('pirate_support_gifts', JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+
+    if (gift.rewards.gold) {
+      setGold(prev => prev + gift.rewards.gold!);
+    }
+    if (gift.rewards.gems) {
+      setGems(prev => prev + gift.rewards.gems!);
+    }
+    if (gift.rewards.shipHeal) {
+      setShips(prev => prev.map(s => ({
+        ...s,
+        heart: Math.min((s.maxHeart || 16000), (s.heart || 1000) + gift.rewards.shipHeal!)
+      })));
+    }
+    if (gift.rewards.crewPower) {
+      setExp(prev => prev + gift.rewards.crewPower! * 2);
+    }
+
+    showToast(`🎉 تم استلام ${gift.title} بنجاح وإضافته لمينائك!`, 'success');
+  };
+
+  // --- Clear / Purge Logs (تفريغ سجلات المعارك القديمة) ---
+  const handleClearLogs = () => {
+    setAttackLogs([]);
+    setSupportGifts([]);
+    setBattleReports([]);
+    try {
+      localStorage.removeItem('pirate_attack_logs');
+      localStorage.removeItem('pirate_support_gifts');
+      localStorage.removeItem('pirate_battle_reports');
+    } catch {}
+    showToast('تم مسح وتفريغ السجلات بنجاح!', 'success');
+  };
+
   const getDestroyedShipStyles = (shipId: string | number) => {
     const idStr = String(shipId);
     if (idStr.endsWith('1') || idStr === 's1') {
@@ -2305,8 +2443,26 @@ export default function App() {
   const [questsExpanded, setQuestsExpanded] = useState(true);
   const [rewardFish, setRewardFish] = useState<{ name: string; amount: number; value: number; luckDoubled?: boolean; guided?: boolean }>({ name: 'أنشوجة', amount: 80, value: 120 });
   const [crewModal, setCrewModal] = useState(false);
+  const [expectedFishModalShipId, setExpectedFishModalShipId] = useState<string | null>(null);
   const [crewTab, setCrewTab] = useState<'sailors' | 'special'>('sailors');
   const [activeReport, setActiveReport] = useState<BattleReport | null>(null);
+
+  const setShipExpectedFish = (shipId: string, fishName: string) => {
+    setShips(prev => {
+      const updated = prev.map(s => {
+        if (s.id === shipId) {
+          return {
+            ...s,
+            expectedFish: fishName
+          };
+        }
+        return s;
+      });
+      localStorage.setItem('pirate_ships_v2', JSON.stringify(updated));
+      return updated;
+    });
+    showToast(`🧭 تم توجيه المرشد لتوقع وصيد [${fishName}] بنجاح!`, 'success');
+  };
 
   // --- Warehouses & Tower ---
   const [fishStorageLevel, setFishStorageLevel] = useState<number>(() => {
@@ -3723,6 +3879,12 @@ export default function App() {
       setTribes(list);
     }, (err) => {
       console.warn("Could not fetch tribes from Firestore:", err.message || err);
+      try {
+        const local = JSON.parse(localStorage.getItem('pirate_local_tribes') || '[]');
+        if (Array.isArray(local) && local.length > 0) {
+          setTribes(prev => prev.length === 0 ? local : prev);
+        }
+      } catch (e) {}
     });
     return () => unsubscribe();
   }, [isLoggedIn, currentUser]);
@@ -3933,12 +4095,33 @@ export default function App() {
                 return updated;
               });
 
+              const newAttackLog: AttackLogItem = {
+                id: 'atk_' + evId,
+                attackerName: attackerName,
+                attackerAvatar: ev.attackerAvatar || '/assets/chat_avatar_2.png',
+                attackerLevel: ev.payload?.attackerLevel || 28,
+                time: 'الآن',
+                title: 'قصف الميناء وتفجير السفن 💥',
+                description: `تعرض ميناؤك لقصف مباشر وتفجير من القبطان @${attackerName}!`,
+                goldLooted: 0,
+                shipsDamaged: 1,
+                isAvenged: false,
+                date: new Date().toISOString(),
+              };
+              setAttackLogs(prev => {
+                const updated = [newAttackLog, ...prev.slice(0, 25)];
+                try { localStorage.setItem('pirate_attack_logs', JSON.stringify(updated)); } catch {}
+                return updated;
+              });
+
               queueNotification({
                 id: 'hb_' + evId,
                 type: 'ATTACK',
                 title: '🚨 هجوم معادٍ مباشر!',
-                message: `تعرض ميناؤك لقصف مباشر من القبطان @${attackerName}!`,
+                message: `تعرض ميناؤك لقصف مباشر من القبطان @${attackerName}! هل تريد رد الهجوم؟`,
                 icon: '💥',
+                authorName: attackerName,
+                senderName: attackerName,
                 createdAt: new Date().toISOString()
               });
               showToast(`🚨 قصف معادٍ! هاجم القبطان @${attackerName} ميناءك وسفنك!`, 'error');
@@ -3957,12 +4140,33 @@ export default function App() {
                 updateDoc(userDocRef, { gold: newGold, updatedAt: new Date().toISOString() }).catch(console.error);
                 return newGold;
               });
+              const newStealLog: AttackLogItem = {
+                id: 'steal_' + evId,
+                attackerName: attackerName,
+                attackerAvatar: ev.attackerAvatar || '/assets/chat_avatar_2.png',
+                attackerLevel: ev.payload?.attackerLevel || 25,
+                time: 'الآن',
+                title: 'تسلل وسرقة ذهب 🏴‍☠️',
+                description: `تسلل القبطان @${attackerName} وسرق 🪙 ${stolenAmount.toLocaleString()} ذهبة من مينائك!`,
+                goldLooted: stolenAmount,
+                shipsDamaged: 0,
+                isAvenged: false,
+                date: new Date().toISOString(),
+              };
+              setAttackLogs(prev => {
+                const updated = [newStealLog, ...prev.slice(0, 25)];
+                try { localStorage.setItem('pirate_attack_logs', JSON.stringify(updated)); } catch {}
+                return updated;
+              });
+
               queueNotification({
                 id: 'hb_' + evId,
                 type: 'ATTACK',
                 title: '🏴‍☠️ تسلل ولصوص!',
-                message: `تسلل القبطان @${attackerName} وسرق 🪙 ${stolenAmount.toLocaleString()} ذهبة من مينائك!`,
+                message: `تسلل القبطان @${attackerName} وسرق 🪙 ${stolenAmount.toLocaleString()} ذهبة من مينائك! هل تريد رد الهجوم؟`,
                 icon: '🥷',
+                authorName: attackerName,
+                senderName: attackerName,
                 createdAt: new Date().toISOString()
               });
               showToast(`🏴‍☠️ تسلل ولصوص! تسلل القبطان @${attackerName} وسرق 🪙 ${stolenAmount.toLocaleString()} ذهبة من مينائك!`, 'error');
@@ -4403,7 +4607,14 @@ export default function App() {
     // Accurate calculation of menu width based on active ship buttons
     const activeShip = ships.find(s => s.id === ship.id);
     const hasGH = activeShip?.assignedCrew?.some(c => c === 'golden_hunter' || c === 'gold_fisher');
-    const buttonCount = hasGH ? 4 : 3;
+    const hasGuide = activeShip?.assignedCrew?.includes('guide');
+    const maxH = activeShip?.maxHeart || ((activeShip?.level || 0) * 1000) + 10000;
+    const curH = typeof activeShip?.heart === 'number' ? activeShip.heart : maxH;
+    const isDamaged = activeShip && (portDestroyed || curH < maxH);
+    let buttonCount = 3;
+    if (hasGH) buttonCount++;
+    if (hasGuide) buttonCount++;
+    if (isDamaged) buttonCount++;
     const estimatedWidth = isMobile ? (buttonCount * 65 + 24) : (buttonCount * 80 + 36);
     const estimatedHeight = isMobile ? 82 : 94;
     const safeMargin = 12;
@@ -4450,9 +4661,13 @@ export default function App() {
       ? selectedShip.fishTypes 
       : ['السردين'];
 
-    // 🧭 مرشد السفينة: يركز الصيد على أفضل نوع سمك تصطاده السفينة
+    // 🧭 مرشد السفينة: يركز ويتوقع نوع سمك محدد بدقة بنسبة 100%
+    const defaultFish = shipFishTypes[shipFishTypes.length - 1] || 'السردين';
+    const targetedFish = selectedShip.expectedFish && shipFishTypes.includes(selectedShip.expectedFish)
+      ? selectedShip.expectedFish
+      : defaultFish;
     const randomFishName = isGuidedActive 
-      ? shipFishTypes[shipFishTypes.length - 1] 
+      ? targetedFish 
       : shipFishTypes[Math.floor(Math.random() * shipFishTypes.length)];
     
     const fishInfo = FISH_REWARD_DATA[randomFishName] || { 
@@ -4730,8 +4945,12 @@ export default function App() {
         ? ship.fishTypes
         : ['السردين'];
 
+      const defaultFish = shipFishTypes[shipFishTypes.length - 1] || 'السردين';
+      const targetedFish = ship.expectedFish && shipFishTypes.includes(ship.expectedFish)
+        ? ship.expectedFish
+        : defaultFish;
       const randomFishName = isGuidedActive
-        ? shipFishTypes[shipFishTypes.length - 1]
+        ? targetedFish
         : shipFishTypes[0];
 
       const fishInfo = FISH_REWARD_DATA[randomFishName] || {
@@ -5087,15 +5306,15 @@ export default function App() {
         return;
       }
       updatedCrewServices.repairer_small = count - 1;
-      healAmount = 500;
+      healAmount = 200;
     } else if (type === 'medium') {
       const count = crewServices.repairer_medium || 0;
       if (count <= 0) {
-        showToast('⚠️ ليس لديك مصلح وسط في المستودع! يمكنك شراؤه من المتجر أو الإصلاح بالذهب.', 'error');
+        showToast('⚠️ ليس لديك مصلح وسيط في المستودع! يمكنك شراؤه من المتجر أو الإصلاح بالذهب.', 'error');
         return;
       }
       updatedCrewServices.repairer_medium = count - 1;
-      healAmount = curH <= 0 ? 1000 : Math.max(1000, Math.floor(maxH * 0.5));
+      healAmount = 500;
     } else if (type === 'large') {
       const count = crewServices.repairer_large || 0;
       if (count <= 0) {
@@ -5103,7 +5322,7 @@ export default function App() {
         return;
       }
       updatedCrewServices.repairer_large = count - 1;
-      healAmount = maxH - curH;
+      healAmount = 300;
     } else if (type === 'legendary') {
       const count = crewServices.repairer_legendary || 0;
       if (count <= 0) {
@@ -5111,7 +5330,7 @@ export default function App() {
         return;
       }
       updatedCrewServices.repairer_legendary = count - 1;
-      repairAll = true;
+      healAmount = 1000;
     } else if (type === 'gold') {
       const cost = 500;
       if (gold < cost) {
@@ -5605,7 +5824,7 @@ export default function App() {
         setGold(res.newGold);
       }
       setShips(updatedShips);
-      alert(`🎉 تهانينا! تم ترقية غواصتك الأسطورية بنجاح إلى ليفل ${nextLevel - 31} (${nextSpec.name}) عبر المعاملة الذرية!`);
+      alert(`🎉 تهانينا! تم ترقية غواصتك الأسطورية بنجاح إلى ${getSubmarineDisplayTier(nextLevel)} (${nextSpec.name}) عبر المعاملة الذرية!`);
     }
   };
 
@@ -5782,11 +6001,15 @@ export default function App() {
             } else if (normKey === 'fixer_lg' || normKey === 'fixer_epic') {
               newHeart = maxHp;
             }
+            const defaultExpected = (normKey === 'guide' && !s.expectedFish) 
+              ? (s.fishTypes?.[s.fishTypes.length - 1] || 'السردين') 
+              : s.expectedFish;
             return {
               ...s,
               heart: typeof newHeart === 'number' ? newHeart : s.heart,
               assignedCrew: newCrew,
-              crewPower: (s.crewPower || 0) + (currentCrew.includes(normKey) ? 0 : 15)
+              crewPower: (s.crewPower || 0) + (currentCrew.includes(normKey) ? 0 : 15),
+              expectedFish: defaultExpected
             };
           }
           if (normKey === 'fixer_epic' && s.exists) {
@@ -5848,13 +6071,14 @@ export default function App() {
     localStorage.setItem('pirate_crew_services', JSON.stringify(updatedCrewServices));
     localStorage.setItem('pirate_ships_v2', JSON.stringify(updatedShips));
 
-    alert(`🎉 تم الشراء بنجاح عبر المعاملة الذرية!\nتم خصم الرصيد وإضافة [${itemName}] مباشرة إلى مخزنك.`);
+    const qtyText = quantity > 1 ? ` (${quantity.toLocaleString()}x)` : '';
+    alert(`🎉 تم الشراء بنجاح عبر المعاملة الذرية!\nتم خصم الرصيد وإضافة [${itemName}]${qtyText} مباشرة إلى مخزنك.`);
     return true;
   };
 
   const buyItem = handlePurchase;
 
-  const buyWeaponItem = async (itemId: string, costType: 'gold' | 'blueGems', costValue: number) => {
+  const buyWeaponItem = async (itemId: string, costType: 'gold' | 'blueGems', costValue: number, quantity: number = 1) => {
     const spec = WEAPONS_DATA.find(w => w.key === itemId || w.id === itemId);
     const name = spec?.name || itemId;
     await handlePurchase({
@@ -5862,7 +6086,8 @@ export default function App() {
       itemId,
       itemName: name,
       costType: costType === 'gold' ? 'gold' : 'blueGems',
-      price: costValue
+      price: costValue * quantity,
+      quantity
     });
   };
 
@@ -5872,17 +6097,21 @@ export default function App() {
     price: number,
     incrementCount: number = 0,
     costType?: 'gold' | 'gems',
-    targetShipId?: string
+    targetShipId?: string,
+    quantity: number = 1
   ) => {
     const spec = CREW_SHOP_ITEMS.find(item => item.id === key);
     const actualCostType = costType || (spec ? spec.costType : 'gems');
-    const actualPrice = spec ? spec.price : price;
+    const unitPrice = spec ? spec.price : price;
+    const finalQty = Math.max(1, quantity || 1);
+    const totalPrice = unitPrice * finalQty;
     await handlePurchase({
       category: 'crew',
       itemId: key,
       itemName: name,
       costType: actualCostType,
-      price: actualPrice,
+      price: totalPrice,
+      quantity: finalQty,
       targetShipId
     });
   };
@@ -8269,6 +8498,30 @@ export default function App() {
                               </span>
                             </div>
                           )}
+
+                          {/* Guide Expected Fish Badge & Direct Selector */}
+                          {ship.assignedCrew && ship.assignedCrew.includes('guide') && !isShipDestroyed && (
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpectedFishModalShipId(ship.id);
+                              }}
+                              title={`نوع الصيد المتوقع بواسطة المرشد: ${ship.expectedFish || (ship.fishTypes && ship.fishTypes[ship.fishTypes.length - 1]) || 'السردين'} - اضغط لاختيار وتغيير نوع السمك`}
+                              className="cursor-pointer absolute left-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border shadow-lg whitespace-nowrap z-30 transition-all hover:scale-105 active:scale-95 bg-sky-950/95 text-sky-200 border-sky-400/90 shadow-sky-500/40"
+                              style={{
+                                top: (ship.assignedCrew.includes('golden_hunter') || ship.assignedCrew.includes('gold_fisher')) ? '-64px' : '-30px',
+                                transform: `translateX(-50%) scaleX(${ship.scaleX < 0 ? -1 : 1})`,
+                              }}
+                            >
+                              <span style={{ fontSize: '13px' }}>🧭</span>
+                              <span className="text-amber-300">متوقع:</span>
+                              <span className="text-white font-extrabold">{ship.expectedFish || (ship.fishTypes && ship.fishTypes[ship.fishTypes.length - 1]) || 'السردين'}</span>
+                              <span>{getFishEmoji(ship.expectedFish || (ship.fishTypes && ship.fishTypes[ship.fishTypes.length - 1]) || 'السردين')}</span>
+                              <span className="text-[10px] bg-sky-700/90 hover:bg-sky-600 px-1.5 py-0.5 rounded text-sky-100 font-bold ml-0.5">
+                                تغيير 🔁
+                              </span>
+                            </div>
+                          )}
                           
                           {/* Fire & Smoke overlay for destroyed local ship */}
                           {isShipDestroyed && (
@@ -8365,21 +8618,21 @@ export default function App() {
                                     pointerEvents: 'auto',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '5px',
-                                    fontSize: '10px',
+                                    gap: '6px',
+                                    fontSize: '12px',
                                     fontWeight: 'bold',
                                     color: '#fef08a',
-                                    background: 'rgba(24, 18, 12, 0.92)',
-                                    border: '1px solid #eab308',
-                                    padding: '2px 8px',
+                                    background: 'rgba(24, 18, 12, 0.95)',
+                                    border: '1.5px solid #eab308',
+                                    padding: '4px 10px',
                                     borderRadius: '12px',
                                     whiteSpace: 'nowrap',
                                     zIndex: 25,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.6)'
+                                    boxShadow: '0 3px 10px rgba(0,0,0,0.8)'
                                   }}
                                 >
                                   <span>❤️ {curH.toLocaleString()} / {maxH.toLocaleString()} HP</span>
-                                  <span style={{ color: '#34d399', fontWeight: 'bold' }}>🔧 صيانة</span>
+                                  <span style={{ color: '#34d399', fontWeight: '900', background: 'rgba(16, 185, 129, 0.2)', padding: '1px 6px', borderRadius: '6px' }}>🔧 صيانة</span>
                                 </div>
                               );
                             }
@@ -9034,7 +9287,28 @@ export default function App() {
                       >
                         250,000 ذهب
                       </button>
-                      <div style={{ fontSize: '10px', color: '#78350f', marginTop: '4px' }}>لديك: <strong>{weapons.smallRocket || 0}</strong></div>
+                      <div style={{
+                        width: '100%',
+                        fontSize: '12.5px',
+                        fontWeight: 'bold',
+                        color: ((weapons.smallRocket || weapons.small_missile) || 0) > 0 ? '#15803d' : '#854d0e',
+                        background: ((weapons.smallRocket || weapons.small_missile) || 0) > 0 ? '#dcfce7' : '#fef3c7',
+                        border: ((weapons.smallRocket || weapons.small_missile) || 0) > 0 ? '1.5px solid #4ade80' : '1px solid #fde047',
+                        borderRadius: '8px',
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        marginTop: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: ((weapons.smallRocket || weapons.small_missile) || 0) > 0 ? '0 0 8px rgba(74, 222, 128, 0.4)' : 'none'
+                      }}>
+                        <span>العدد المتوفر:</span>
+                        <strong style={{ fontSize: '15px', color: ((weapons.smallRocket || weapons.small_missile) || 0) > 0 ? '#166534' : '#b45309' }}>
+                          {((weapons.smallRocket !== undefined ? weapons.smallRocket : weapons.small_missile) || 0).toLocaleString()}x
+                        </strong>
+                      </div>
                     </div>
 
                     {/* Item 2: صاروخ متوسط */}
@@ -9114,7 +9388,28 @@ export default function App() {
                       >
                         500,000 ذهب
                       </button>
-                      <div style={{ fontSize: '10px', color: '#78350f', marginTop: '4px' }}>لديك: <strong>{weapons.mediumRocket || 0}</strong></div>
+                      <div style={{
+                        width: '100%',
+                        fontSize: '12.5px',
+                        fontWeight: 'bold',
+                        color: ((weapons.mediumRocket || weapons.medium_missile) || 0) > 0 ? '#15803d' : '#854d0e',
+                        background: ((weapons.mediumRocket || weapons.medium_missile) || 0) > 0 ? '#dcfce7' : '#fef3c7',
+                        border: ((weapons.mediumRocket || weapons.medium_missile) || 0) > 0 ? '1.5px solid #4ade80' : '1px solid #fde047',
+                        borderRadius: '8px',
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        marginTop: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: ((weapons.mediumRocket || weapons.medium_missile) || 0) > 0 ? '0 0 8px rgba(74, 222, 128, 0.4)' : 'none'
+                      }}>
+                        <span>العدد المتوفر:</span>
+                        <strong style={{ fontSize: '15px', color: ((weapons.mediumRocket || weapons.medium_missile) || 0) > 0 ? '#166534' : '#b45309' }}>
+                          {((weapons.mediumRocket !== undefined ? weapons.mediumRocket : weapons.medium_missile) || 0).toLocaleString()}x
+                        </strong>
+                      </div>
                     </div>
 
                     {/* Item 3: صاروخ كبير */}
@@ -9194,7 +9489,28 @@ export default function App() {
                       >
                         1,000,000 ذهب
                       </button>
-                      <div style={{ fontSize: '10px', color: '#78350f', marginTop: '4px' }}>لديك: <strong>{weapons.largeRocket || 0}</strong></div>
+                      <div style={{
+                        width: '100%',
+                        fontSize: '12.5px',
+                        fontWeight: 'bold',
+                        color: ((weapons.largeRocket || weapons.large_missile) || 0) > 0 ? '#15803d' : '#854d0e',
+                        background: ((weapons.largeRocket || weapons.large_missile) || 0) > 0 ? '#dcfce7' : '#fef3c7',
+                        border: ((weapons.largeRocket || weapons.large_missile) || 0) > 0 ? '1.5px solid #4ade80' : '1px solid #fde047',
+                        borderRadius: '8px',
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        marginTop: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: ((weapons.largeRocket || weapons.large_missile) || 0) > 0 ? '0 0 8px rgba(74, 222, 128, 0.4)' : 'none'
+                      }}>
+                        <span>العدد المتوفر:</span>
+                        <strong style={{ fontSize: '15px', color: ((weapons.largeRocket || weapons.large_missile) || 0) > 0 ? '#166534' : '#b45309' }}>
+                          {((weapons.largeRocket !== undefined ? weapons.largeRocket : weapons.large_missile) || 0).toLocaleString()}x
+                        </strong>
+                      </div>
                     </div>
 
                     {/* Item 4: قنبلة ذرية */}
@@ -9260,7 +9576,28 @@ export default function App() {
                       >
                         100 جوهرة
                       </button>
-                      <div style={{ fontSize: '10px', color: '#1e3a8a', marginTop: '4px' }}>لديك: <strong>{weapons.atomicBomb || 0}</strong></div>
+                      <div style={{
+                        width: '100%',
+                        fontSize: '12.5px',
+                        fontWeight: 'bold',
+                        color: ((weapons.atomicBomb || weapons.nuke_bomb) || 0) > 0 ? '#1e3a8a' : '#475569',
+                        background: ((weapons.atomicBomb || weapons.nuke_bomb) || 0) > 0 ? '#dbeafe' : '#f1f5f9',
+                        border: ((weapons.atomicBomb || weapons.nuke_bomb) || 0) > 0 ? '1.5px solid #60a5fa' : '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '4px 6px',
+                        textAlign: 'center',
+                        marginTop: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: ((weapons.atomicBomb || weapons.nuke_bomb) || 0) > 0 ? '0 0 8px rgba(96, 165, 250, 0.4)' : 'none'
+                      }}>
+                        <span>العدد المتوفر:</span>
+                        <strong style={{ fontSize: '15px', color: ((weapons.atomicBomb || weapons.nuke_bomb) || 0) > 0 ? '#1e40af' : '#334155' }}>
+                          {((weapons.atomicBomb !== undefined ? weapons.atomicBomb : weapons.nuke_bomb) || 0).toLocaleString()}x
+                        </strong>
+                      </div>
                     </div>
 
                     {/* Item 5: مصلح صغير */}
@@ -9708,7 +10045,7 @@ export default function App() {
                       .map((spec) => {
                         const isSubmarineCard = spec.level === 32;
                         const ownedSubmarine = isSubmarineCard 
-                          ? ships.find((s) => s.exists && s.level !== undefined && s.level >= 32 && s.level <= 35)
+                          ? ships.find((s) => s.exists && s.level !== undefined && s.level >= 32 && s.level <= 37)
                           : null;
 
                         const currentLevel = ownedSubmarine ? (ownedSubmarine.level || 32) : spec.level;
@@ -9780,7 +10117,7 @@ export default function App() {
                             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
                               <div style={{ fontWeight: 'bold', fontSize: '12px', color: '#fff' }}>
                                 {isSubmarineCard && ownedSubmarine
-                                  ? `غواصة الأعماق (مستوى ${currentLevel - 31} 🤿)`
+                                  ? `غواصة الأعماق (${getSubmarineDisplayTier(currentLevel)} 🤿)`
                                   : currentSpec.name
                                 }
                               </div>
@@ -9811,24 +10148,24 @@ export default function App() {
                                   }}
                                 >
                                   <span style={{ fontSize: '14px' }}>⚡</span>
-                                  ترقية لـ ليفل {nextLevelForUpgrade - 31} بـ {nextSpecForUpgrade.price.toLocaleString('ar-EG')} 🪙
+                                  ترقية إلى {getSubmarineDisplayTier(nextLevelForUpgrade)} بـ {nextSpecForUpgrade.price.toLocaleString('ar-EG')} 🪙
                                 </button>
                               ) : (
                                 <button 
                                   disabled
                                   style={{
                                     width: '100%',
-                                    background: 'rgba(16, 185, 129, 0.2)',
-                                    color: '#34d399',
-                                    border: '1px solid #10b981',
+                                    background: 'linear-gradient(to bottom, #b45309, #78350f)',
+                                    color: '#fef08a',
+                                    border: '1px solid #facc15',
                                     borderRadius: '8px',
                                     padding: '8px 4px',
                                     fontSize: '11px',
                                     fontWeight: 'bold',
-                                    cursor: 'not-allowed'
+                                    cursor: 'default'
                                   }}
                                 >
-                                  ⭐ أقصى مستوى
+                                  ⭐ أقصى مستوى (Max)
                                 </button>
                               )
                             ) : isLocked ? (
@@ -9873,7 +10210,7 @@ export default function App() {
                                   marginTop: '8px'
                                 }}
                               >
-                                {isSubmarineCard ? `🤿 شراء الغواصة بـ 🪙 ${spec.price.toLocaleString('ar-EG')}` : `شراء بـ 🪙 ${spec.price.toLocaleString('ar-EG')} 🚢`}
+                                {isSubmarineCard ? `🤿 شراء الغواصة (المستوى الأساسي 0) بـ 🪙 ${spec.price.toLocaleString('ar-EG')}` : `شراء بـ 🪙 ${spec.price.toLocaleString('ar-EG')} 🚢`}
                               </button>
                             )}
                           </div>
@@ -9988,156 +10325,28 @@ export default function App() {
         </div>
       )}
 
-      {/* ----------------- TRIBES TAB (القبائل والتحالفات) ----------------- */}
+      {/* ----------------- TRIBES TAB (القبائل والتحالفات - ملوك الأعماق) ----------------- */}
       {activeTab === 'tribes' && (
-        <div className="tab-overlay" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
-          <div className="tab-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>🛡️ تحالفات وقبائل الميناء (Multiplayer)</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                onClick={() => setShowCreateTribeModal(true)}
-                style={{ background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)', color: '#fff', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-                ➕ إنشاء تحالف جديد
-              </button>
-              <button className="close-tab-btn" onClick={() => setActiveTab('harbor')}>إغلاق</button>
-            </div>
-          </div>
-
-          <p style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '14px' }}>
-            انضم مع لاعبين حقيقيين من جميع أنحاء العالم لإنشاء تحالفات قوية، التبرع، وبناء أساطيل لا تقهر!
-          </p>
-
-          {/* Current Tribe Status if User in Tribe */}
-          {tribeId && (
-            <div style={{ background: 'rgba(234, 179, 8, 0.12)', border: '1.5px solid #ca8a04', padding: '12px', borderRadius: '12px', marginBottom: '16px' }}>
-              <div style={{ fontWeight: 'bold', color: '#fef08a', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>🛡️ تحالفك الحالي: {tribeName}</span>
-              </div>
-              <div style={{ fontSize: '12px', color: '#e2e8f0', marginTop: '6px' }}>
-                أنت الآن عضو رسمي في هذا التحالف. يمكنك التبرع بالذهب لرفع مستواه أو التنسيق مع باقي الأعضاء في الشات العام!
-              </div>
-            </div>
-          )}
-
-          {/* Tribes List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {tribes.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#94a3b8', padding: '24px 12px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px dashed #78350f' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏴‍☠️</div>
-                <div style={{ fontWeight: 'bold', color: '#fef08a', marginBottom: '4px' }}>لا توجد تحالفات حالياً</div>
-                <div style={{ fontSize: '12px' }}>كن أول قبطان يؤسس تحالفاً جديداً ويدعو اللاعبين للانضمام إليه!</div>
-                <button 
-                  onClick={() => setShowCreateTribeModal(true)}
-                  style={{ marginTop: '12px', background: '#ca8a04', color: '#000', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '12px' }}>
-                  إنشاء أول تحالف ➕
-                </button>
-              </div>
-            ) : (
-              tribes.map(t => {
-                const currentUser = auth.currentUser;
-                const isMember = t.members?.includes(currentUser?.uid);
-                return (
-                  <div key={t.id} style={{ background: isMember ? 'rgba(234, 179, 8, 0.15)' : 'rgba(28, 25, 23, 0.95)', border: isMember ? '2px solid #facc15' : '1px solid #78350f', padding: '14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '12px' }}>
-                      <div style={{ fontWeight: 'bold', color: '#fef08a', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>{t.emblem}</span>
-                        <span>{t.name}</span>
-                        <span style={{ fontSize: '10px', background: '#ca8a04', color: '#000', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>مستوى {t.level}</span>
-                      </div>
-                      <div style={{ color: '#cbd5e1', marginTop: '4px' }}>
-                        القائد: <span style={{ color: '#38bdf8' }}>@{t.leaderName}</span> | الأعضاء: <span style={{ color: '#facc15' }}>{t.membersCount || t.members?.length || 1}/50</span>
-                      </div>
-                      <div style={{ color: '#94a3b8', marginTop: '2px', fontSize: '11px' }}>
-                        قوة التحالف: 🛡️ {(t.power || 0).toLocaleString()} | التبرعات: 🪙 {(t.donations || 0).toLocaleString()}
-                      </div>
-                      {t.description && (
-                        <div style={{ color: '#a1a1aa', fontSize: '11px', marginTop: '4px', fontStyle: 'italic' }}>
-                          "{t.description}"
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                      {isMember && (
-                        <button 
-                          onClick={() => donateToTribe(t)}
-                          style={{ background: '#ca8a04', color: '#000', border: '1px solid #fef08a', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-                          تبرع (100🪙)
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => joinTribe(t)}
-                        style={{ background: isMember ? '#991b1b' : '#1e3a8a', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        {isMember ? 'مغادرة' : 'انضمام'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Create Tribe Modal Overlay */}
-          {showCreateTribeModal && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-              <div style={{ background: '#1c1917', border: '2px solid #ca8a04', borderRadius: '16px', padding: '20px', maxWidth: '420px', width: '100%', color: '#fff', direction: 'rtl' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#fef08a', marginBottom: '12px', textAlign: 'center' }}>
-                  🏴‍☠️ تأسيس تحالف جديد للميناء
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>اسم التحالف:</label>
-                    <input 
-                      type="text"
-                      placeholder="مثال: تحالف أسياد الكاريبي"
-                      value={newTribeName}
-                      onChange={(e) => setNewTribeName(e.target.value)}
-                      style={{ width: '100%', background: '#292524', border: '1px solid #ca8a04', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '12px', outline: 'none' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>وصف التحالف:</label>
-                    <textarea 
-                      placeholder="اكتب شعار أو هدف التحالف..."
-                      value={newTribeDesc}
-                      onChange={(e) => setNewTribeDesc(e.target.value)}
-                      rows={3}
-                      style={{ width: '100%', background: '#292524', border: '1px solid #ca8a04', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '12px', outline: 'none', resize: 'none' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '12px', color: '#cbd5e1', display: 'block', marginBottom: '4px' }}>شعار/أيقونة التحالف:</label>
-                    <div style={{ display: 'flex', gap: '8px', fontSize: '20px' }}>
-                      {['🏴‍☠️', '⚓', '🦈', '🐉', '⚔️', '👑', '🦁'].map(emoji => (
-                        <div 
-                          key={emoji}
-                          onClick={() => setNewTribeEmblem(emoji)}
-                          style={{ cursor: 'pointer', padding: '6px', background: newTribeEmblem === emoji ? '#ca8a04' : '#292524', borderRadius: '6px', border: newTribeEmblem === emoji ? '2px solid #fff' : '1px solid #78350f' }}>
-                          {emoji}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={() => setShowCreateTribeModal(false)}
-                    style={{ background: '#64748b', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    إلغاء
-                  </button>
-                  <button 
-                    onClick={handleCreateTribe}
-                    style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    تأسيس التحالف 🎉
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <TribeView
+          onClose={() => setActiveTab('harbor')}
+          tribeId={tribeId}
+          setTribeId={setTribeId}
+          tribeName={tribeName}
+          setTribeName={setTribeName}
+          tribes={tribes}
+          setTribes={setTribes}
+          gold={gold}
+          setGold={setGold}
+          gems={gems}
+          setGems={setGems}
+          currentUser={currentUser}
+          username={username}
+          showToast={showToast}
+          sendChatMessage={sendSecureChatMessage}
+          realPlayers={realPlayers}
+          joinTribe={joinTribe}
+          donateToTribe={donateToTribe}
+        />
       )}
 
       {/* ----------------- CHAT TAB (الشات والدردشة العامة ملوك الأعماق) ----------------- */}
@@ -10154,6 +10363,9 @@ export default function App() {
           setIsMuted={setIsSfxMuted}
           showToast={showToast}
           friends={friends}
+          tribeId={tribeId}
+          tribeName={tribeName}
+          onOpenTribes={() => setActiveTab('tribes')}
         />
       )}
 
@@ -10164,33 +10376,33 @@ export default function App() {
             <span>👥 قائمة أصدقاء الميناء (Real Players)</span>
             <button className="close-tab-btn" onClick={() => setActiveTab('harbor')}>إغلاق</button>
           </div>
-          <p style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '14px' }}>
+          <p style={{ fontSize: '15px', color: '#e2e8f0', marginBottom: '18px', lineHeight: '1.6', fontWeight: 'bold' }}>
             تواصل مع صيادين وقراصنة حقيقيين سجلوا في اللعبة، أرسل لهم هدايا الذهب، وزر موانئهم في أي وقت!
           </p>
 
           {/* Pending Friend Requests Section */}
           {friendRequests.length > 0 && (
-            <div style={{ background: 'rgba(202, 138, 4, 0.15)', border: '1.5px solid #ca8a04', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
-              <div style={{ fontWeight: 'bold', color: '#fef08a', fontSize: '13px', marginBottom: '10px' }}>
+            <div style={{ background: 'rgba(202, 138, 4, 0.15)', border: '2px solid #ca8a04', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontWeight: '900', color: '#fef08a', fontSize: '16px', marginBottom: '12px' }}>
                 ✉️ طلبات الصداقة الواردة ({friendRequests.length}):
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {friendRequests.map((req, idx) => (
-                  <div key={idx} style={{ background: '#1c1917', border: '1px solid #78350f', padding: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                      <span style={{ fontSize: '18px' }}>{req.senderAvatar || '⚓'}</span>
-                      <span style={{ fontWeight: 'bold', color: '#38bdf8' }}>@{req.senderName}</span>
-                      <span style={{ color: '#94a3b8', fontSize: '10px' }}>يريد إضافتك كصديق</span>
+                  <div key={idx} style={{ background: '#1c1917', border: '1.5px solid #78350f', padding: '12px 16px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px' }}>
+                      <span style={{ fontSize: '24px' }}>{req.senderAvatar || '⚓'}</span>
+                      <span style={{ fontWeight: '900', color: '#38bdf8' }}>@{req.senderName}</span>
+                      <span style={{ color: '#cbd5e1', fontSize: '12px' }}>يريد إضافتك كصديق</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
                       <button 
                         onClick={() => handleAcceptFriendRequest(req)}
-                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: '900' }}>
                         قبول ✅
                       </button>
                       <button 
                         onClick={() => handleDeclineFriendRequest(req)}
-                        style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                        style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: '900' }}>
                         رفض ❌
                       </button>
                     </div>
@@ -10201,41 +10413,41 @@ export default function App() {
           )}
 
           {/* Real Friends Section */}
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontWeight: 'bold', color: '#fef08a', fontSize: '13px', marginBottom: '10px' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ fontWeight: '900', color: '#fef08a', fontSize: '17px', marginBottom: '12px' }}>
               🌟 أصدقائي الحاليون ({realPlayers.filter(p => friends.includes(p.userId)).length}):
             </div>
             {realPlayers.filter(p => friends.includes(p.userId)).length === 0 ? (
-              <div style={{ textShadow: 'none', background: 'rgba(0,0,0,0.3)', border: '1px dashed #78350f', borderRadius: '8px', padding: '14px', textAlign: 'center', color: '#a8a29e', fontSize: '12px' }}>
+              <div style={{ textShadow: 'none', background: 'rgba(0,0,0,0.4)', border: '1.5px dashed #78350f', borderRadius: '12px', padding: '20px', textAlign: 'center', color: '#cbd5e1', fontSize: '15px', fontWeight: 'bold', lineHeight: '1.6' }}>
                 ليس لديك أصدقاء مضافون بعد.<br />اختر صياداً من القائمة بالأسفل وأرسل له طلب صداقة!
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {realPlayers.filter(p => friends.includes(p.userId)).map(friend => {
                   const isOnline = friend.updatedAt && (new Date().getTime() - new Date(friend.updatedAt).getTime() < 600000);
                   return (
-                    <div key={friend.userId} style={{ background: 'rgba(15, 23, 42, 0.95)', border: '1.5px solid #ca8a04', padding: '10px 14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ fontSize: '22px', background: '#0284c7', width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #38bdf8' }}>
+                    <div key={friend.userId} style={{ background: 'rgba(15, 23, 42, 0.95)', border: '1.5px solid #ca8a04', padding: '14px 18px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ fontSize: '26px', background: '#0284c7', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #38bdf8' }}>
                           {friend.avatar || '⚓'}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 'bold', color: '#fef08a', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ fontWeight: '900', color: '#fef08a', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {friend.username}
-                            <span style={{ fontSize: '9px', background: isOnline ? '#22c55e' : '#64748b', color: '#fff', padding: '1px 5px', borderRadius: '4px' }}>
+                            <span style={{ fontSize: '11px', background: isOnline ? '#22c55e' : '#64748b', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
                               {isOnline ? 'متصل الآن 🟢' : 'غير متصل 🔴'}
                             </span>
                           </div>
-                          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
+                          <div style={{ color: '#cbd5e1', fontSize: '13px', marginTop: '3px', fontWeight: 'bold' }}>
                             الذهب: 🪙 {(friend.gold || 0).toLocaleString()} | سيرفر: {friend.server || 'الأسطورة 1'}
                           </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           onClick={() => handleSendGiftToFriend(friend)}
-                          style={{ background: 'linear-gradient(180deg, #ca8a04 0%, #854d0e 100%)', color: '#fff', border: '1px solid #fef08a', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                          style={{ background: 'linear-gradient(180deg, #ca8a04 0%, #854d0e 100%)', color: '#fff', border: '1px solid #fef08a', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', cursor: 'pointer', fontWeight: '900' }}>
                           إرسال هدية (500🪙) 🎁
                         </button>
                         <button 
@@ -10243,7 +10455,7 @@ export default function App() {
                             handleOpenProfile(friend);
                             setInspectedPlayerShipVisit(true);
                           }}
-                          style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                          style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', cursor: 'pointer', fontWeight: '900' }}>
                           زيارة الميناء ⚓
                         </button>
                       </div>
@@ -10255,33 +10467,33 @@ export default function App() {
           </div>
 
           {/* Search & Add Registered Real Players */}
-          <div style={{ background: '#1c1917', border: '1px solid #78350f', borderRadius: '12px', padding: '12px' }}>
-            <div style={{ fontWeight: 'bold', color: '#fef08a', fontSize: '13px', marginBottom: '8px' }}>
-              🔍 البحث عن صايدي وقراصنة الميناء وإضافتهم:
+          <div style={{ background: '#1c1917', border: '1.5px solid #78350f', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontWeight: '900', color: '#fef08a', fontSize: '16px', marginBottom: '10px' }}>
+              🔍 البحث عن صيادي وقراصنة الميناء وإضافتهم:
             </div>
             <input 
               type="text"
               placeholder="اكتب اسم القبطان للبحث عنه..."
               value={friendSearchQuery}
               onChange={(e) => setFriendSearchQuery(e.target.value)}
-              style={{ width: '100%', background: '#292524', border: '1px solid #ca8a04', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '12px', outline: 'none', marginBottom: '10px' }}
+              style={{ width: '100%', background: '#292524', border: '1.5px solid #ca8a04', borderRadius: '10px', padding: '12px 16px', color: '#fff', fontSize: '15px', outline: 'none', marginBottom: '14px', fontWeight: 'bold' }}
             />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
               {realPlayers
                 .filter(p => p.userId !== auth.currentUser?.uid && !friends.includes(p.userId))
                 .filter(p => !friendSearchQuery || p.username?.toLowerCase().includes(friendSearchQuery.toLowerCase()))
-                .slice(0, 10)
+                .slice(0, 15)
                 .map(p => (
-                  <div key={p.userId} style={{ background: '#292524', padding: '8px 10px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>{p.avatar || '⚓'}</span>
-                      <span style={{ fontWeight: 'bold', color: '#fef08a' }}>@{p.username}</span>
-                      <span style={{ color: '#94a3b8', fontSize: '10px' }}>🪙 {(p.gold || 0).toLocaleString()}</span>
+                  <div key={p.userId} style={{ background: '#292524', padding: '12px 14px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '22px' }}>{p.avatar || '⚓'}</span>
+                      <span style={{ fontWeight: '900', color: '#fef08a' }}>@{p.username}</span>
+                      <span style={{ color: '#cbd5e1', fontSize: '13px', fontWeight: 'bold' }}>🪙 {(p.gold || 0).toLocaleString()}</span>
                     </div>
                     <button 
                       onClick={() => handleSendFriendRequest(p)}
-                      style={{ background: '#15803d', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                      style={{ background: '#15803d', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '900', cursor: 'pointer' }}>
                       إضافة صديق ➕
                     </button>
                   </div>
@@ -10511,12 +10723,12 @@ export default function App() {
           fontFamily: 'Cairo, sans-serif'
         }}>
           <div style={{
-            background: 'linear-gradient(to bottom, #110c08 0%, #1c130d 100%)',
-            border: '2.5px solid #ca8a04',
-            borderRadius: '16px',
+            background: 'linear-gradient(180deg, #051428 0%, #082142 50%, #031022 100%)',
+            border: '2.5px solid #00d2ff',
+            borderRadius: '20px',
             width: '100%',
             maxWidth: '620px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.9), inset 0 0 30px rgba(202,138,4,0.15)',
+            boxShadow: '0 0 35px rgba(0, 210, 255, 0.4), 0 25px 60px rgba(0, 0, 0, 0.95), inset 0 0 25px rgba(0, 210, 255, 0.15)',
             color: '#fff',
             overflow: 'hidden',
             display: 'flex',
@@ -10525,14 +10737,15 @@ export default function App() {
           }}>
             {/* Modal Header/Banner */}
             <div style={{
-              background: 'radial-gradient(circle at center, #3c2514 0%, #150d06 100%)',
-              borderBottom: '2px solid #ca8a04',
+              background: 'radial-gradient(circle at center, #0284c7 0%, #0369a1 40%, #072a4d 75%, #031427 100%)',
+              borderBottom: '2px solid rgba(0, 210, 255, 0.6)',
               padding: '24px 20px 20px 20px',
               position: 'relative',
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center'
+              alignItems: 'center',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
             }}>
               {/* Close Button */}
               <button 
@@ -10541,51 +10754,54 @@ export default function App() {
                   position: 'absolute',
                   top: '16px',
                   left: '16px',
-                  background: 'rgba(0,0,0,0.5)',
+                  background: 'rgba(15, 23, 42, 0.85)',
                   border: '1.5px solid #ef4444',
-                  color: '#fca5a5',
-                  width: '32px',
-                  height: '32px',
+                  color: '#f87171',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '16px',
+                  fontSize: '17px',
                   cursor: 'pointer',
                   fontWeight: 'bold',
-                  zIndex: 10
+                  zIndex: 10,
+                  boxShadow: '0 0 12px rgba(239, 68, 68, 0.4)',
+                  transition: 'all 0.2s ease'
                 }}
+                title="إغلاق"
               >
                 ✕
               </button>
 
-              {/* Large Gold Framed User Avatar */}
+              {/* Large Oceanic Framed User Avatar */}
               <div style={{
-                width: '90px',
-                height: '90px',
+                width: '100px',
+                height: '100px',
                 borderRadius: '50%',
-                border: '4px solid #facc15',
-                background: '#0c0704',
+                border: '3.5px solid #00d2ff',
+                background: 'radial-gradient(circle at center, #0284c7 0%, #033260 70%, #021a36 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '48px',
-                boxShadow: '0 0 20px rgba(250, 204, 21, 0.4)',
+                fontSize: '54px',
+                boxShadow: '0 0 25px rgba(0, 210, 255, 0.6), inset 0 0 15px rgba(0, 210, 255, 0.35)',
                 marginBottom: '12px'
               }}>
                 {inspectedPlayer.avatar || '⚓'}
               </div>
 
               {/* Username & Class */}
-              <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#facc15', margin: '0 0 4px 0', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+              <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#ffffff', margin: '0 0 6px 0', textShadow: '0 0 16px rgba(0, 210, 255, 0.8), 0 2px 6px rgba(0,0,0,0.9)' }}>
                 {inspectedPlayer.username}
               </h2>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px', color: '#cbd5e1' }}>
-                <span style={{ background: '#78350f', border: '1px solid #ca8a04', borderRadius: '4px', padding: '2px 8px', fontWeight: 'bold' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12.5px', color: '#93c5fd' }}>
+                <span style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', border: '1px solid #38bdf8', borderRadius: '6px', padding: '3px 10px', fontWeight: 'bold', color: '#ffffff', boxShadow: '0 0 10px rgba(56, 189, 248, 0.35)' }}>
                   {inspectedPlayer.pirateClass || 'قبطان مغامر'}
                 </span>
                 <span>•</span>
-                <span style={{ color: '#a8a29e' }}>
+                <span style={{ color: '#7dd3fc', fontWeight: 'bold' }}>
                   {inspectedPlayer.server || 'سيرفر الأسطورة 1'}
                 </span>
               </div>
@@ -10598,7 +10814,7 @@ export default function App() {
               display: 'flex',
               flexDirection: 'column',
               gap: '18px',
-              backgroundColor: '#0a0604'
+              backgroundColor: '#041325'
             }} className="no-scrollbar">
               
               {/* Stats Grid */}
@@ -10609,18 +10825,19 @@ export default function App() {
               }}>
                 {/* Level Stat */}
                 <div style={{
-                  background: 'rgba(202,138,4,0.05)',
-                  border: '1.5px solid #2d1e12',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '12px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 0 12px rgba(56, 189, 248, 0.08)'
                 }}>
-                  <span style={{ fontSize: '24px' }}>⭐</span>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))' }}>⭐</span>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#a8a29e', fontWeight: 'bold' }}>المستوى والقوة العامة</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#facc15' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>المستوى والقوة العامة</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#38bdf8' }}>
                       مستوى {Math.max(1, Math.floor(Math.sqrt(inspectedPlayer.exp || 0) / 10) + 1)}
                     </div>
                   </div>
@@ -10628,18 +10845,19 @@ export default function App() {
 
                 {/* Gold Stat */}
                 <div style={{
-                  background: 'rgba(202,138,4,0.05)',
-                  border: '1.5px solid #2d1e12',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '12px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 0 12px rgba(56, 189, 248, 0.08)'
                 }}>
-                  <span style={{ fontSize: '24px' }}>🪙</span>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))' }}>🪙</span>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#a8a29e', fontWeight: 'bold' }}>الرصيد الذهبي</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#34d399' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>الرصيد الذهبي</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#34d399' }}>
                       {(inspectedPlayer.gold || 0).toLocaleString()} ذهبة
                     </div>
                   </div>
@@ -10647,18 +10865,19 @@ export default function App() {
 
                 {/* Gems Stat */}
                 <div style={{
-                  background: 'rgba(202,138,4,0.05)',
-                  border: '1.5px solid #2d1e12',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '12px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 0 12px rgba(56, 189, 248, 0.08)'
                 }}>
-                  <span style={{ fontSize: '24px' }}>💎</span>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))' }}>💎</span>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#a8a29e', fontWeight: 'bold' }}>الجواهر الزرقاء</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#60a5fa' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>الجواهر الزرقاء</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#60a5fa' }}>
                       {(inspectedPlayer.gems || 0).toLocaleString()} جوهرة
                     </div>
                   </div>
@@ -10666,18 +10885,19 @@ export default function App() {
 
                 {/* Tower Stat */}
                 <div style={{
-                  background: 'rgba(202,138,4,0.05)',
-                  border: '1.5px solid #2d1e12',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '12px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 0 12px rgba(56, 189, 248, 0.08)'
                 }}>
-                  <span style={{ fontSize: '24px' }}>🏰</span>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))' }}>🏰</span>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#a8a29e', fontWeight: 'bold' }}>بيت السفن والبرج</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#fb923c' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>بيت السفن والبرج</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#fb923c' }}>
                       مستوى {inspectedPlayer.shipTowerLevel || 1}
                     </div>
                   </div>
@@ -10685,18 +10905,19 @@ export default function App() {
 
                 {/* Fish Storage Stat */}
                 <div style={{
-                  background: 'rgba(202,138,4,0.05)',
-                  border: '1.5px solid #2d1e12',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '12px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 0 12px rgba(56, 189, 248, 0.08)'
                 }}>
-                  <span style={{ fontSize: '24px' }}>🐟</span>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))' }}>🐟</span>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#a8a29e', fontWeight: 'bold' }}>بيت السمك</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#38bdf8' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>بيت السمك</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#22d3ee' }}>
                       مستوى {inspectedPlayer.fishStorageLevel || 1}
                     </div>
                   </div>
@@ -10704,18 +10925,19 @@ export default function App() {
 
                 {/* Active Ships Stat */}
                 <div style={{
-                  background: 'rgba(202,138,4,0.05)',
-                  border: '1.5px solid #2d1e12',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
+                  background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                  border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px'
+                  gap: '12px',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 0 12px rgba(56, 189, 248, 0.08)'
                 }}>
-                  <span style={{ fontSize: '24px' }}>⛵</span>
+                  <span style={{ fontSize: '36px', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.7))' }}>⛵</span>
                   <div>
-                    <div style={{ fontSize: '11px', color: '#a8a29e', fontWeight: 'bold' }}>الأسطول الحقيقي</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#a78bfa' }}>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'bold' }}>الأسطول الحقيقي</div>
+                    <div style={{ fontSize: '15px', fontWeight: '900', color: '#c084fc' }}>
                       {getInspectedPlayerShips(inspectedPlayer).filter((s: any) => s.exists !== false).length} سفن نشطة
                     </div>
                   </div>
@@ -10727,8 +10949,8 @@ export default function App() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: '10px',
-                borderTop: '1.5px solid #2d1e12',
-                borderBottom: '1.5px solid #2d1e12',
+                borderTop: '1.5px solid rgba(56, 189, 248, 0.25)',
+                borderBottom: '1.5px solid rgba(56, 189, 248, 0.25)',
                 padding: '14px 0'
               }}>
                 <button 
@@ -10741,21 +10963,21 @@ export default function App() {
                   }}
                   style={{
                     background: 'linear-gradient(to bottom, #0284c7, #0369a1)',
-                    border: '1px solid #38bdf8',
-                    borderRadius: '8px',
+                    border: '1.5px solid #38bdf8',
+                    borderRadius: '10px',
                     padding: '10px',
                     color: '#fff',
                     fontWeight: 'bold',
-                    fontSize: '12px',
+                    fontSize: '12.5px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 10px rgba(2, 132, 199, 0.3)'
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)'
                   }}
                 >
-                  <span>⚓</span> زيارة الميناء والسفن
+                  <span style={{ fontSize: '20px' }}>⚓</span> زيارة الميناء والسفن
                 </button>
 
                 <button 
@@ -10771,8 +10993,8 @@ export default function App() {
                   }}
                   style={{
                     background: 'linear-gradient(to bottom, #7c3aed, #6d28d9)',
-                    border: '1px solid #a78bfa',
-                    borderRadius: '8px',
+                    border: '1.5px solid #a78bfa',
+                    borderRadius: '10px',
                     padding: '10px',
                     color: '#fff',
                     fontWeight: 'bold',
@@ -10781,11 +11003,11 @@ export default function App() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 10px rgba(124, 58, 237, 0.3)'
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)'
                   }}
                 >
-                  <span>💬</span> رسالة
+                  <span style={{ fontSize: '20px' }}>💬</span> رسالة
                 </button>
 
                 <button 
@@ -10794,8 +11016,8 @@ export default function App() {
                   }}
                   style={{
                     background: 'linear-gradient(to bottom, #059669, #047857)',
-                    border: '1px solid #34d399',
-                    borderRadius: '8px',
+                    border: '1.5px solid #34d399',
+                    borderRadius: '10px',
                     padding: '10px',
                     color: '#fff',
                     fontWeight: 'bold',
@@ -10804,24 +11026,27 @@ export default function App() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 10px rgba(5, 150, 105, 0.3)'
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.4)'
                   }}
                 >
-                  <span>➕</span> إضافة صديق
+                  <span style={{ fontSize: '20px' }}>➕</span> إضافة صديق
                 </button>
               </div>
 
               {/* Alliance Section */}
               <div style={{
-                background: '#150e09',
-                border: '1px solid #2d1e12',
-                borderRadius: '10px',
-                padding: '14px'
+                background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.6) 0%, rgba(3, 22, 45, 0.8) 100%)',
+                border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                borderRadius: '12px',
+                padding: '14px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.4)'
               }}>
-                <h4 style={{ color: '#facc15', fontSize: '13px', fontWeight: 'bold', margin: '0 0 6px 0' }}>🏴‍☠️ التحالف البحري الحالي</h4>
-                <p style={{ color: '#e7e5e4', fontSize: '12.5px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>🛡️</span>
+                <h4 style={{ color: '#38bdf8', fontSize: '14px', fontWeight: '900', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '18px' }}>🏴‍☠️</span> التحالف البحري الحالي
+                </h4>
+                <p style={{ color: '#e2e8f0', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }}>🛡️</span>
                   <span>مستقل / لا ينتمي لأي حلف حالياً في جزيرة الكاريبي.</span>
                 </p>
               </div>
@@ -10830,14 +11055,14 @@ export default function App() {
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px'
+                gap: '10px'
               }}>
-                <h4 style={{ color: '#facc15', fontSize: '13.5px', fontWeight: 'bold', margin: '4px 0 2px 0', borderBottom: '1px solid #2d1e12', paddingBottom: '6px' }}>
-                  🚢 أسطول سفن القبطان النشطة
+                <h4 style={{ color: '#38bdf8', fontSize: '14.5px', fontWeight: '900', margin: '4px 0 2px 0', borderBottom: '1.5px solid rgba(56, 189, 248, 0.25)', paddingBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '20px' }}>🚢</span> أسطول سفن القبطان النشطة
                 </h4>
                 
                 {getInspectedPlayerShips(inspectedPlayer).filter((s: any) => s.exists).length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '16px', color: '#a8a29e', background: '#110c08', border: '1px dashed #2d1e12', borderRadius: '10px', fontSize: '12px' }}>
+                  <div style={{ textAlign: 'center', padding: '18px', color: '#94a3b8', background: 'rgba(8, 47, 85, 0.4)', border: '1.5px dashed rgba(56, 189, 248, 0.3)', borderRadius: '12px', fontSize: '13px' }}>
                     ⚠️ القبطان لا يملك أي سفن نشطة في الوقت الحالي.
                   </div>
                 ) : (
@@ -10845,20 +11070,21 @@ export default function App() {
                     <div 
                       key={index}
                       style={{
-                        background: '#120a05',
-                        border: '1.5px solid #2d1e12',
-                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, rgba(8, 47, 85, 0.7) 0%, rgba(3, 22, 45, 0.9) 100%)',
+                        border: '1.5px solid rgba(56, 189, 248, 0.35)',
+                        borderRadius: '14px',
                         padding: '12px 16px',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.4), inset 0 0 10px rgba(56, 189, 248, 0.08)'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '32px' }}>{ship.imgEmoji || '🛶'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <span style={{ fontSize: '46px', filter: 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.4))' }}>{ship.imgEmoji || '🛶'}</span>
                         <div>
-                          <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{ship.name}</div>
-                          <div style={{ fontSize: '11px', color: '#cbd5e1', marginTop: '2px' }}>
+                          <div style={{ fontWeight: '900', color: '#ffffff', fontSize: '15px' }}>{ship.name}</div>
+                          <div style={{ fontSize: '11.5px', color: '#93c5fd', marginTop: '3px', fontWeight: '500' }}>
                             المستوى: {ship.level} • قوة تدمير السفن: {ship.power || 5} • قوة التحمل: {ship.heart || 200} HP
                           </div>
                         </div>
@@ -12433,67 +12659,67 @@ export default function App() {
               <div style={{
                 background: '#150d06',
                 border: '3px solid #ca8a04',
-                borderRadius: '16px',
-                padding: '24px',
+                borderRadius: '18px',
+                padding: '26px 22px',
                 width: '100%',
-                maxWidth: '460px',
-                boxShadow: '0 15px 40px rgba(0,0,0,0.9)',
+                maxWidth: '600px',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.95), 0 0 25px rgba(202, 138, 4, 0.3)',
                 color: '#fff',
                 textAlign: 'center',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '16px',
+                gap: '18px',
                 maxHeight: '90vh',
                 overflowY: 'auto'
               }}>
                 {activeInteractionType === 'details' && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto', maxHeight: '140px' }}>
-                      <ShipImage level={typeof selectedVisitedShip.level === 'number' ? selectedVisitedShip.level : 0} width={180} plain={true} />
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto', maxHeight: '170px' }}>
+                      <ShipImage level={typeof selectedVisitedShip.level === 'number' ? selectedVisitedShip.level : 0} width={220} plain={true} />
                     </div>
                     
                     <div>
-                      <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#facc15', margin: '0 0 4px 0' }}>
+                      <h3 style={{ fontSize: '24px', fontWeight: '900', color: '#facc15', margin: '0 0 6px 0', textShadow: '0 2px 8px rgba(0,0,0,0.8)' }}>
                         {selectedVisitedShip.name} (مستوى {selectedVisitedShip.level ?? 0})
                       </h3>
-                      <div style={{ fontSize: '13px', color: '#a8a29e', fontWeight: 'bold' }}>
+                      <div style={{ fontSize: '15px', color: '#cbd5e1', fontWeight: 'bold' }}>
                         المالك: القبطان @{inspectedPlayer.username}
                       </div>
                     </div>
 
                     {/* Specs List */}
                     <div style={{
-                      background: 'rgba(0,0,0,0.4)',
-                      border: '1px solid #3c2919',
-                      borderRadius: '10px',
-                      padding: '12px 16px',
-                      fontSize: '13.5px',
-                      color: '#cbd5e1',
+                      background: 'rgba(0,0,0,0.5)',
+                      border: '1.5px solid #3c2919',
+                      borderRadius: '12px',
+                      padding: '16px 20px',
+                      fontSize: '16px',
+                      color: '#f1f5f9',
                       textAlign: 'right',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '6px'
+                      gap: '8px'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>❤️ قوة تحمل الهيكل (الدم):</span>
                         {(() => {
                           const visitedSpec = SHOP_SHIPS.find(s => s.level === selectedVisitedShip.level) || SHOP_SHIPS[0];
                           const maxHeart = selectedVisitedShip.maxHeart || visitedSpec.heart || 200;
                           const currentHeart = typeof selectedVisitedShip.heart === 'number' ? Math.min(selectedVisitedShip.heart, maxHeart) : (inspectedPlayer.portDestroyed ? 0 : maxHeart);
                           return (
-                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
+                            <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '16px' }}>
                               {currentHeart.toLocaleString()} / {maxHeart.toLocaleString()} HP
                             </span>
                           );
                         })()}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>⚔️ قوة تدمير المدافع:</span>
-                        <span style={{ color: '#ca8a04', fontWeight: 'bold' }}>{(selectedVisitedShip.power || 5).toLocaleString()}</span>
+                        <span style={{ color: '#facc15', fontWeight: '900', fontSize: '16px' }}>{(selectedVisitedShip.power || 5).toLocaleString()}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>📦 سعة الشحن:</span>
-                        <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{(selectedVisitedShip.cargo || 2000).toLocaleString()}</span>
+                        <span style={{ color: '#4ade80', fontWeight: '900', fontSize: '16px' }}>{(selectedVisitedShip.cargo || 2000).toLocaleString()}</span>
                       </div>
                     </div>
 
@@ -12511,19 +12737,19 @@ export default function App() {
                         }}
                         style={{
                           background: 'linear-gradient(to bottom, #ef4444, #b91c1c)',
-                          border: '1.5px solid #fca5a5',
+                          border: '2px solid #fca5a5',
                           color: '#fff',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          fontWeight: 'bold',
-                          fontSize: '14px',
+                          borderRadius: '12px',
+                          padding: '14px 20px',
+                          fontWeight: '900',
+                          fontSize: '17px',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 15px rgba(239, 68, 68, 0.45)',
+                          boxShadow: '0 4px 18px rgba(239, 68, 68, 0.5)',
                           marginTop: '8px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
+                          gap: '10px',
                           animation: 'pulse 1.5s infinite'
                         }}
                       >
@@ -12533,15 +12759,15 @@ export default function App() {
 
                     {/* Post-Attack / Destroyed Port Actions */}
                     {Boolean(inspectedPlayer.portDestroyed || (typeof selectedVisitedShip.heart === 'number' && selectedVisitedShip.heart <= 0)) && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
                         <div style={{
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          border: '1px solid #ef4444',
+                          background: 'rgba(239, 68, 68, 0.2)',
+                          border: '1.5px solid #ef4444',
                           color: '#fca5a5',
-                          padding: '8px 12px',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: 'bold'
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          fontSize: '14px',
+                          fontWeight: '900'
                         }}>
                           🔥 تم إحراق وتدمير الأسطول والميناء بنجاح!
                         </div>
@@ -12559,18 +12785,18 @@ export default function App() {
                           }}
                           style={{
                             background: 'linear-gradient(to bottom, #eab308, #ca8a04)',
-                            border: '1.5px solid #fef08a',
+                            border: '2px solid #fef08a',
                             color: '#000',
-                            borderRadius: '8px',
-                            padding: '12px',
+                            borderRadius: '12px',
+                            padding: '14px 20px',
                             fontWeight: '900',
-                            fontSize: '14px',
+                            fontSize: '17px',
                             cursor: 'pointer',
-                            boxShadow: '0 4px 15px rgba(234, 179, 8, 0.45)',
+                            boxShadow: '0 4px 16px rgba(234, 179, 8, 0.5)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '8px'
+                            gap: '10px'
                           }}
                         >
                           🪙 سرقة ونهب حطام الأسطول
@@ -12583,12 +12809,12 @@ export default function App() {
                             background: 'linear-gradient(to bottom, #6366f1, #4f46e5)',
                             border: '1.5px solid #a5b4fc',
                             color: '#fff',
-                            borderRadius: '8px',
-                            padding: '10px',
-                            fontWeight: 'bold',
-                            fontSize: '13px',
+                            borderRadius: '12px',
+                            padding: '12px 18px',
+                            fontWeight: '900',
+                            fontSize: '15px',
                             cursor: 'pointer',
-                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)',
+                            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -12604,7 +12830,7 @@ export default function App() {
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(2, 1fr)',
-                      gap: '10px',
+                      gap: '12px',
                       marginTop: '10px'
                     }}>
                       {/* Steal Button */}
@@ -12620,14 +12846,14 @@ export default function App() {
                         }}
                         style={{
                           background: 'linear-gradient(to bottom, #ca8a04, #a16207)',
-                          border: '1px solid #fef08a',
+                          border: '1.5px solid #fef08a',
                           color: '#000',
-                          borderRadius: '8px',
-                          padding: '10px',
-                          fontWeight: 'bold',
-                          fontSize: '13px',
+                          borderRadius: '12px',
+                          padding: '13px',
+                          fontWeight: '900',
+                          fontSize: '16px',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 10px rgba(202, 138, 4, 0.3)'
+                          boxShadow: '0 4px 12px rgba(202, 138, 4, 0.4)'
                         }}
                       >
                         سرقة وتسلل 🏴‍☠️
@@ -12638,14 +12864,14 @@ export default function App() {
                         onClick={() => setActiveInteractionType('repair')}
                         style={{
                           background: 'linear-gradient(to bottom, #10b981, #047857)',
-                          border: '1px solid #6ee7b7',
+                          border: '1.5px solid #6ee7b7',
                           color: '#fff',
-                          borderRadius: '8px',
-                          padding: '10px',
-                          fontWeight: 'bold',
-                          fontSize: '13px',
+                          borderRadius: '12px',
+                          padding: '13px',
+                          fontWeight: '900',
+                          fontSize: '16px',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)'
+                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
                         }}
                       >
                         دعم وإصلاح الهيكل 🔧
@@ -12656,14 +12882,15 @@ export default function App() {
                       onClick={() => setSelectedVisitedShip(null)}
                       style={{
                         background: '#292524',
-                        border: '1px solid #444',
+                        border: '1.5px solid #57534e',
                         color: '#cbd5e1',
-                        borderRadius: '8px',
-                        padding: '8px',
-                        fontWeight: 'bold',
-                        fontSize: '13px',
+                        borderRadius: '12px',
+                        padding: '12px 20px',
+                        fontWeight: '900',
+                        fontSize: '16px',
                         cursor: 'pointer',
-                        marginTop: '6px'
+                        marginTop: '8px',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
                       }}
                     >
                       إغلاق
@@ -13248,13 +13475,13 @@ export default function App() {
               <div style={{
                 background: 'linear-gradient(to bottom, #111827, #09090b)',
                 border: '3px solid #ca8a04',
-                borderRadius: '16px',
-                padding: '24px',
+                borderRadius: '18px',
+                padding: '24px 20px',
                 width: '100%',
-                maxWidth: '480px',
+                maxWidth: '620px',
                 maxHeight: '90vh',
                 overflowY: 'auto',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.95)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.95), 0 0 25px rgba(202, 138, 4, 0.25)',
                 color: '#fff',
                 textAlign: 'center'
               }}>
@@ -13265,10 +13492,10 @@ export default function App() {
                   const maxHeart = activeVisitedShip.maxHeart || 190000;
                   return (
                     <div style={{
-                      background: 'rgba(24, 24, 27, 0.85)',
-                      border: '1.5px solid #27272a',
-                      borderRadius: '12px',
-                      padding: '12px 16px',
+                      background: 'rgba(24, 24, 27, 0.9)',
+                      border: '1.5px solid #3f3f46',
+                      borderRadius: '14px',
+                      padding: '14px 18px',
                       marginBottom: '20px',
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -13276,15 +13503,15 @@ export default function App() {
                       direction: 'rtl'
                     }}>
                       <div style={{ textAlign: 'right' }}>
-                        <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: '#facc15', margin: '0 0 4px 0' }}>
+                        <h4 style={{ fontSize: '18px', fontWeight: '900', color: '#facc15', margin: '0 0 6px 0' }}>
                           {activeVisitedShip.name}
                         </h4>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <div style={{
-                            width: '100px',
-                            height: '8px',
+                            width: '130px',
+                            height: '11px',
                             background: '#27272a',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             overflow: 'hidden'
                           }}>
                             <div style={{
@@ -13293,7 +13520,7 @@ export default function App() {
                               background: 'linear-gradient(to left, #ef4444, #f87171)'
                             }} />
                           </div>
-                          <span style={{ fontSize: '12px', color: '#f87171', fontWeight: 'bold' }}>
+                          <span style={{ fontSize: '14px', color: '#f87171', fontWeight: '900' }}>
                             {currentHeart.toLocaleString()} / {maxHeart.toLocaleString()} ❤️
                           </span>
                         </div>
@@ -13301,29 +13528,29 @@ export default function App() {
                       <div style={{
                         background: '#14532d',
                         color: '#4ade80',
-                        border: '1px solid #22c55e',
-                        borderRadius: '8px',
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
+                        border: '1.5px solid #22c55e',
+                        borderRadius: '10px',
+                        padding: '6px 14px',
+                        fontSize: '13px',
+                        fontWeight: '900',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '6px',
                         cursor: 'pointer'
                       }} onClick={() => alert("⚓ طاقمك جاهز للإبحار والصيد في مياهه الإقليمية!")}>
-                        <span>⚓</span>
+                        <span style={{ fontSize: '15px' }}>⚓</span>
                         <span>تصيد في البحر</span>
                       </div>
                     </div>
                   );
                 })()}
 
-                <h4 style={{ textAlign: 'right', fontSize: '14px', color: '#cbd5e1', marginBottom: '12px', fontWeight: 'bold' }}>
-                  اختر صاروخ من مخزنك:
+                <h4 style={{ textAlign: 'right', fontSize: '17px', color: '#f1f5f9', marginBottom: '14px', fontWeight: '900' }}>
+                  🎯 اختر صاروخ من مخزنك:
                 </h4>
 
                 {/* Weapons List Container */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {/* 1. رسالة التفجير */}
                   <div 
                     onClick={() => {
@@ -13342,28 +13569,28 @@ export default function App() {
                       setShowAdSelectorModal(true);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(0,0,0,0.4) 100%)',
-                      border: '1.5px solid #22c55e',
-                      borderRadius: '12px',
-                      padding: '12px',
+                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(0,0,0,0.5) 100%)',
+                      border: '2px solid #22c55e',
+                      borderRadius: '14px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 15px rgba(34,197,94,0.1)'
+                      boxShadow: '0 4px 15px rgba(34,197,94,0.15)'
                     }}
-                    className="hover:bg-[rgba(34,197,94,0.2)]"
+                    className="hover:bg-[rgba(34,197,94,0.25)]"
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <span style={{ fontSize: '12px', color: '#4ade80', background: '#14532d', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>{(weapons.adBomb !== undefined ? weapons.adBomb : (weapons.emp_bomb !== undefined ? weapons.emp_bomb : 0))}x</span>
+                      <span style={{ fontSize: '16px', color: '#ffffff', background: 'linear-gradient(135deg, #16a34a, #15803d)', border: '2px solid #4ade80', padding: '6px 14px', borderRadius: '10px', fontWeight: '900', boxShadow: '0 0 10px rgba(74, 222, 128, 0.6)' }}>{(weapons.adBomb !== undefined ? weapons.adBomb : (weapons.emp_bomb !== undefined ? weapons.emp_bomb : 0)).toLocaleString()}x</span>
                       <div style={{
                         position: 'relative',
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '10px',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        border: '1.5px solid rgba(74, 222, 128, 0.5)',
+                        border: '2px solid rgba(74, 222, 128, 0.6)',
                         backgroundImage: `url(${WEAPON_MEDIA_BOMB_BG})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -13372,13 +13599,13 @@ export default function App() {
                         justifyContent: 'center',
                         boxShadow: 'inset 0 0 8px rgba(0,0,0,0.6)'
                       }}>
-                        <img src={WEAPON_MEDIA_BOMB_ICON} alt="رسالة التفجير" referrerPolicy="no-referrer" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
+                        <img src={WEAPON_MEDIA_BOMB_ICON} alt="رسالة التفجير" referrerPolicy="no-referrer" style={{ width: '48px', height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '12px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#4ade80' }}>رسالة التفجير</div>
-                      <div style={{ fontSize: '12px', color: '#86efac', fontWeight: 'bold' }}>ضرر 20,000 💥 (50 💎)</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: '1.3', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '14px' }}>
+                      <div style={{ fontSize: '17px', fontWeight: '900', color: '#4ade80' }}>رسالة التفجير</div>
+                      <div style={{ fontSize: '14px', color: '#86efac', fontWeight: '900', marginTop: '2px' }}>ضرر 20,000 💥 (50 💎)</div>
+                      <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4', marginTop: '3px' }}>
                         إلحاق 20,000 ضرر بأسطول الخصم مع بث رسالة وتثبيتها
                       </div>
                     </div>
@@ -13396,28 +13623,28 @@ export default function App() {
                       handleLaunchAtomicBomb();
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(0,0,0,0.4) 100%)',
-                      border: '1.5px solid #ef4444',
-                      borderRadius: '12px',
-                      padding: '12px',
+                      background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(0,0,0,0.5) 100%)',
+                      border: '2px solid #ef4444',
+                      borderRadius: '14px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 15px rgba(239,68,68,0.1)'
+                      boxShadow: '0 4px 15px rgba(239,68,68,0.15)'
                     }}
-                    className="hover:bg-[rgba(239,68,68,0.2)]"
+                    className="hover:bg-[rgba(239,68,68,0.25)]"
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <span style={{ fontSize: '12px', color: '#fca5a5', background: '#7f1d1d', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>{(weapons.atomicBomb !== undefined ? weapons.atomicBomb : (weapons.nuke_bomb !== undefined ? weapons.nuke_bomb : 0))}x</span>
+                      <span style={{ fontSize: '16px', color: '#ffffff', background: 'linear-gradient(135deg, #dc2626, #991b1b)', border: '2px solid #f87171', padding: '6px 14px', borderRadius: '10px', fontWeight: '900', boxShadow: '0 0 10px rgba(248, 113, 113, 0.6)' }}>{(weapons.atomicBomb !== undefined ? weapons.atomicBomb : (weapons.nuke_bomb !== undefined ? weapons.nuke_bomb : 0)).toLocaleString()}x</span>
                       <div style={{
                         position: 'relative',
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '10px',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                        border: '2px solid rgba(239, 68, 68, 0.6)',
                         backgroundImage: `url(${WEAPON_ATOMIC_BOMB_BG})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -13426,13 +13653,13 @@ export default function App() {
                         justifyContent: 'center',
                         boxShadow: 'inset 0 0 8px rgba(0,0,0,0.6)'
                       }}>
-                        <img src={WEAPON_ATOMIC_BOMB_ICON} alt="قنبلة الموت الأسود" referrerPolicy="no-referrer" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
+                        <img src={WEAPON_ATOMIC_BOMB_ICON} alt="قنبلة الموت الأسود" referrerPolicy="no-referrer" style={{ width: '48px', height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '12px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fca5a5' }}>قنبلة الموت الأسود</div>
-                      <div style={{ fontSize: '12px', color: '#fca5a5', fontWeight: 'bold' }}>ضرر 70,000 💥 (150 💎)</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: '1.3', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '14px' }}>
+                      <div style={{ fontSize: '17px', fontWeight: '900', color: '#fca5a5' }}>قنبلة الموت الأسود</div>
+                      <div style={{ fontSize: '14px', color: '#fca5a5', fontWeight: '900', marginTop: '2px' }}>ضرر 70,000 💥 (150 💎)</div>
+                      <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4', marginTop: '3px' }}>
                         قنبلة فتاكة تلحق 70,000 ضرر بجميع سفن الأسطول
                       </div>
                     </div>
@@ -13450,28 +13677,28 @@ export default function App() {
                       handleLaunchSmallRocket(selectedVisitedShip);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.12) 0%, rgba(24, 24, 27, 0.6) 100%)',
-                      border: '1.5px solid rgba(234, 88, 12, 0.4)',
-                      borderRadius: '12px',
-                      padding: '12px',
+                      background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.16) 0%, rgba(24, 24, 27, 0.65) 100%)',
+                      border: '2px solid rgba(234, 88, 12, 0.5)',
+                      borderRadius: '14px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 15px rgba(234, 88, 12, 0.1)'
+                      boxShadow: '0 4px 15px rgba(234, 88, 12, 0.15)'
                     }}
-                    className="hover:bg-[rgba(234,88,12,0.2)] hover:border-amber-600"
+                    className="hover:bg-[rgba(234,88,12,0.25)] hover:border-amber-500"
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <span style={{ fontSize: '12px', color: '#ffedd5', background: '#7c2d12', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>{(weapons.smallRocket !== undefined ? weapons.smallRocket : (weapons.small_missile !== undefined ? weapons.small_missile : 0))}x</span>
+                      <span style={{ fontSize: '16px', color: '#ffffff', background: 'linear-gradient(135deg, #ea580c, #9a3412)', border: '2px solid #fb923c', padding: '6px 14px', borderRadius: '10px', fontWeight: '900', boxShadow: '0 0 10px rgba(251, 146, 60, 0.6)' }}>{(weapons.smallRocket !== undefined ? weapons.smallRocket : (weapons.small_missile !== undefined ? weapons.small_missile : 0)).toLocaleString()}x</span>
                       <div style={{
                         position: 'relative',
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '10px',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        border: '1.5px solid rgba(234, 88, 12, 0.5)',
+                        border: '2px solid rgba(234, 88, 12, 0.6)',
                         backgroundImage: `url(${WEAPON_SMALL_MISSILE_BG})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -13480,13 +13707,13 @@ export default function App() {
                         justifyContent: 'center',
                         boxShadow: 'inset 0 0 8px rgba(0,0,0,0.6)'
                       }}>
-                        <img src={WEAPON_SMALL_MISSILE_ICON} alt="صاروخ صغير" referrerPolicy="no-referrer" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
+                        <img src={WEAPON_SMALL_MISSILE_ICON} alt="صاروخ صغير" referrerPolicy="no-referrer" style={{ width: '48px', height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '12px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fed7aa' }}>صاروخ صغير</div>
-                      <div style={{ fontSize: '12px', color: '#facc15', fontWeight: 'bold' }}>ضرر 1,000 ⚔️ (100,000 🪙)</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: '1.3', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '14px' }}>
+                      <div style={{ fontSize: '17px', fontWeight: '900', color: '#fed7aa' }}>صاروخ صغير</div>
+                      <div style={{ fontSize: '14px', color: '#facc15', fontWeight: '900', marginTop: '2px' }}>ضرر 1,000 ⚔️ (100,000 🪙)</div>
+                      <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4', marginTop: '3px' }}>
                         صاروخ صغير وسريع لتوجيه ضربة مباشرة تلحق 1,000 ضرر
                       </div>
                     </div>
@@ -13504,28 +13731,28 @@ export default function App() {
                       handleLaunchMediumRocket(selectedVisitedShip);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(24, 24, 27, 0.6) 100%)',
-                      border: '1.5px solid rgba(249, 115, 22, 0.4)',
-                      borderRadius: '12px',
-                      padding: '12px',
+                      background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.16) 0%, rgba(24, 24, 27, 0.65) 100%)',
+                      border: '2px solid rgba(249, 115, 22, 0.5)',
+                      borderRadius: '14px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 15px rgba(249, 115, 22, 0.1)'
+                      boxShadow: '0 4px 15px rgba(249, 115, 22, 0.15)'
                     }}
-                    className="hover:bg-[rgba(249,115,22,0.2)] hover:border-orange-500"
+                    className="hover:bg-[rgba(249,115,22,0.25)] hover:border-orange-500"
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <span style={{ fontSize: '12px', color: '#fed7aa', background: '#9a3412', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>{(weapons.mediumRocket !== undefined ? weapons.mediumRocket : (weapons.medium_missile !== undefined ? weapons.medium_missile : 0))}x</span>
+                      <span style={{ fontSize: '16px', color: '#ffffff', background: 'linear-gradient(135deg, #d97706, #b45309)', border: '2px solid #fde047', padding: '6px 14px', borderRadius: '10px', fontWeight: '900', boxShadow: '0 0 10px rgba(253, 224, 71, 0.6)' }}>{(weapons.mediumRocket !== undefined ? weapons.mediumRocket : (weapons.medium_missile !== undefined ? weapons.medium_missile : 0)).toLocaleString()}x</span>
                       <div style={{
                         position: 'relative',
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '10px',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        border: '1.5px solid rgba(249, 115, 22, 0.5)',
+                        border: '2px solid rgba(249, 115, 22, 0.6)',
                         backgroundImage: `url(${WEAPON_MEDIUM_MISSILE_BG})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -13534,13 +13761,13 @@ export default function App() {
                         justifyContent: 'center',
                         boxShadow: 'inset 0 0 8px rgba(0,0,0,0.6)'
                       }}>
-                        <img src={WEAPON_MEDIUM_MISSILE_ICON} alt="صاروخ المتوسط" referrerPolicy="no-referrer" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
+                        <img src={WEAPON_MEDIUM_MISSILE_ICON} alt="صاروخ المتوسط" referrerPolicy="no-referrer" style={{ width: '48px', height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '12px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fed7aa' }}>صاروخ المتوسط</div>
-                      <div style={{ fontSize: '12px', color: '#facc15', fontWeight: 'bold' }}>ضرر 5,000 ⚔️ (200,000 🪙)</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: '1.3', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '14px' }}>
+                      <div style={{ fontSize: '17px', fontWeight: '900', color: '#fed7aa' }}>صاروخ المتوسط</div>
+                      <div style={{ fontSize: '14px', color: '#facc15', fontWeight: '900', marginTop: '2px' }}>ضرر 5,000 ⚔️ (200,000 🪙)</div>
+                      <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4', marginTop: '3px' }}>
                         صاروخ متوسط القوة يخترق الدروع ويلحق 5,000 ضرر بهيكل السفينة
                       </div>
                     </div>
@@ -13558,28 +13785,28 @@ export default function App() {
                       handleLaunchLargeRocket(selectedVisitedShip);
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(24, 24, 27, 0.6) 100%)',
-                      border: '1.5px solid rgba(234, 179, 8, 0.4)',
-                      borderRadius: '12px',
-                      padding: '12px',
+                      background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.16) 0%, rgba(24, 24, 27, 0.65) 100%)',
+                      border: '2px solid rgba(234, 179, 8, 0.5)',
+                      borderRadius: '14px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 15px rgba(234, 179, 8, 0.1)'
+                      boxShadow: '0 4px 15px rgba(234, 179, 8, 0.15)'
                     }}
-                    className="hover:bg-[rgba(234,179,8,0.2)] hover:border-yellow-500"
+                    className="hover:bg-[rgba(234,179,8,0.25)] hover:border-yellow-500"
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <span style={{ fontSize: '12px', color: '#fef08a', background: '#854d0e', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>{(weapons.largeRocket !== undefined ? weapons.largeRocket : (weapons.large_missile !== undefined ? weapons.large_missile : 0))}x</span>
+                      <span style={{ fontSize: '16px', color: '#ffffff', background: 'linear-gradient(135deg, #b45309, #78350f)', border: '2px solid #facc15', padding: '6px 14px', borderRadius: '10px', fontWeight: '900', boxShadow: '0 0 10px rgba(250, 204, 21, 0.6)' }}>{(weapons.largeRocket !== undefined ? weapons.largeRocket : (weapons.large_missile !== undefined ? weapons.large_missile : 0)).toLocaleString()}x</span>
                       <div style={{
                         position: 'relative',
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '10px',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        border: '1.5px solid rgba(234, 179, 8, 0.5)',
+                        border: '2px solid rgba(234, 179, 8, 0.6)',
                         backgroundImage: `url(${WEAPON_LARGE_MISSILE_BG})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -13588,128 +13815,34 @@ export default function App() {
                         justifyContent: 'center',
                         boxShadow: 'inset 0 0 8px rgba(0,0,0,0.6)'
                       }}>
-                        <img src={WEAPON_LARGE_MISSILE_ICON} alt="صاروخ كبير" referrerPolicy="no-referrer" style={{ width: '40px', height: '40px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
+                        <img src={WEAPON_LARGE_MISSILE_ICON} alt="صاروخ كبير" referrerPolicy="no-referrer" style={{ width: '48px', height: '48px', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.85))', position: 'relative', zIndex: 2 }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '12px' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fef08a' }}>صاروخ كبير</div>
-                      <div style={{ fontSize: '12px', color: '#facc15', fontWeight: 'bold' }}>ضرر 100,000 💥 (300,000 🪙)</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: '1.3', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', flex: 1, paddingRight: '14px' }}>
+                      <div style={{ fontSize: '17px', fontWeight: '900', color: '#fef08a' }}>صاروخ كبير</div>
+                      <div style={{ fontSize: '14px', color: '#facc15', fontWeight: '900', marginTop: '2px' }}>ضرر 100,000 💥 (300,000 🪙)</div>
+                      <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4', marginTop: '3px' }}>
                         صاروخ فتاك يزلزل الدفاعات ويلحق 100,000 ضرر
                       </div>
                     </div>
                   </div>
 
-                  {/* 6. معطل مضاد الصواريخ */}
-                  <div 
-                    onClick={() => {
-                      if ((weapons.antiRocketDisabler || 0) <= 0) {
-                        alert("❌ لا تملك هذا العنصر!");
-                        return;
-                      }
-                      handleDisableDefense('rocket');
-                    }}
-                    style={{
-                      background: 'rgba(251, 191, 36, 0.05)',
-                      border: '1px solid #fbbf24',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    className="hover:bg-[rgba(251,191,36,0.15)]"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '11px', color: '#fcd34d', background: '#78350f', padding: '2px 6px', borderRadius: '4px' }}>{weapons.antiRocketDisabler !== undefined ? weapons.antiRocketDisabler : 6}x</span>
-                      <span style={{ fontSize: '24px' }}>⚡</span>
-                    </div>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fcd34d' }}>صاروخ تعطيل مضاد الصواريخ</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1' }}>يعطل مضاد الصواريخ 10 دقائق</div>
-                    </div>
-                  </div>
-
-                  {/* 7. معطل مضاد الذري */}
-                  <div 
-                    onClick={() => {
-                      if ((weapons.antiNukeDisabler || 0) <= 0) {
-                        alert("❌ لا تملك هذا العنصر!");
-                        return;
-                      }
-                      handleDisableDefense('nuke');
-                    }}
-                    style={{
-                      background: 'rgba(251, 191, 36, 0.05)',
-                      border: '1px solid #fbbf24',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    className="hover:bg-[rgba(251,191,36,0.15)]"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '11px', color: '#fcd34d', background: '#78350f', padding: '2px 6px', borderRadius: '4px' }}>{weapons.antiNukeDisabler !== undefined ? weapons.antiNukeDisabler : 6}x</span>
-                      <span style={{ fontSize: '24px' }}>⚡</span>
-                    </div>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fcd34d' }}>صاروخ تعطيل مضاد الذري</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1' }}>يعطل مضاد القنبلة الذرية 10 دقائق</div>
-                    </div>
-                  </div>
-
-                  {/* 8. معطل مضاد الإعلانية */}
-                  <div 
-                    onClick={() => {
-                      if ((weapons.antiAdDisabler || 0) <= 0) {
-                        alert("❌ لا تملك هذا العنصر!");
-                        return;
-                      }
-                      handleDisableDefense('ad');
-                    }}
-                    style={{
-                      background: 'rgba(251, 191, 36, 0.05)',
-                      border: '1px solid #fbbf24',
-                      borderRadius: '12px',
-                      padding: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    className="hover:bg-[rgba(251,191,36,0.15)]"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '11px', color: '#fcd34d', background: '#78350f', padding: '2px 6px', borderRadius: '4px' }}>{weapons.antiAdDisabler !== undefined ? weapons.antiAdDisabler : 7}x</span>
-                      <span style={{ fontSize: '24px' }}>⚡</span>
-                    </div>
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#fcd34d' }}>صاروخ تعطيل مضاد الإعلانية</div>
-                      <div style={{ fontSize: '11px', color: '#cbd5e1' }}>يعطل مضاد القنبلة الإعلانية 10 دقائق</div>
-                    </div>
-                  </div>
                 </div>
 
                 <button 
                   onClick={() => setShowWeaponSelector(false)}
                   style={{
                     background: '#27272a',
-                    border: '1px solid #3f3f46',
-                    color: '#cbd5e1',
-                    borderRadius: '8px',
-                    padding: '10px 20px',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
+                    border: '1.5px solid #52525b',
+                    color: '#f1f5f9',
+                    borderRadius: '12px',
+                    padding: '12px 24px',
+                    fontWeight: '900',
+                    fontSize: '16px',
                     cursor: 'pointer',
-                    marginTop: '18px',
-                    width: '100%'
+                    marginTop: '20px',
+                    width: '100%',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
                   }}
                 >
                   رجوع 🔙
@@ -14589,6 +14722,7 @@ export default function App() {
         unassignCrewFromShip={unassignCrewFromShip}
         unassignCrewFromAllShips={unassignCrewFromAllShips}
         assignCrewToAllShips={assignCrewToAllShips}
+        crewInventory={crewInventory}
         onToggleAutoFishing={toggleAutoFishing}
       />
 
@@ -14625,327 +14759,18 @@ export default function App() {
         </div>
       )}
 
-      {/* ----------------- SHIP REPAIR & RESTORATION MODAL ----------------- */}
+      {/* ----------------- SHIP WORKSHOP & RESTORATION MODAL (ورشة ملوك الأعماق) ----------------- */}
       {repairModalShip && (
-        <div 
-          id="ship-repair-modal" 
-          className="modal" 
-          style={{ 
-            display: 'block', 
-            maxWidth: '460px', 
-            width: '92%', 
-            padding: '16px', 
-            background: 'rgba(18, 14, 10, 0.98)', 
-            border: '2px solid #ca8a04', 
-            borderRadius: '16px', 
-            boxShadow: '0 12px 40px rgba(0,0,0,0.9), 0 0 20px rgba(202, 138, 4, 0.3)',
-            direction: 'rtl',
-            fontFamily: '"Cairo", sans-serif',
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }}
-        >
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #332715', paddingBottom: '10px', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '24px' }}>🛠️</span>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#facc15', fontWeight: '900' }}>ورشة صيانة وترميم السفن</h3>
-                <div style={{ fontSize: '11px', color: '#a8a29e' }}>إصلاح أضرار المعارك واستعادة جاهزية الأسطول</div>
-              </div>
-            </div>
-            <button 
-              onClick={() => setRepairModalShip(null)}
-              style={{ background: 'transparent', border: 'none', color: '#a8a29e', fontSize: '20px', cursor: 'pointer', padding: '4px' }}
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Ship Details Card */}
-          {(() => {
-            const ship = ships.find(s => s.id === repairModalShip.id) || repairModalShip;
-            const maxH = ship.maxHeart || ((ship.level || 0) * 1000) + 10000;
-            const curH = typeof ship.heart === 'number' ? ship.heart : maxH;
-            const isDestroyed = curH <= 0 || portDestroyed;
-            const healthPct = Math.min(100, Math.max(0, Math.round((curH / maxH) * 100)));
-
-            return (
-              <div>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '12px', 
-                  background: 'rgba(30, 24, 18, 0.9)', 
-                  border: isDestroyed ? '1.5px solid #ef4444' : '1px solid #78350f', 
-                  borderRadius: '12px', 
-                  padding: '10px 14px', 
-                  marginBottom: '14px' 
-                }}>
-                  <div style={{ width: '60px', height: '50px', position: 'relative', flexShrink: 0 }}>
-                    <ShipImage level={typeof ship.level === 'number' ? ship.level : 0} width={60} plain={true} fill={true} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '900', color: '#fde047' }}>{ship.name || 'سفينة الأسطول'}</span>
-                      <span style={{ 
-                        fontSize: '10px', 
-                        padding: '2px 8px', 
-                        borderRadius: '8px', 
-                        fontWeight: 'bold',
-                        background: isDestroyed ? 'rgba(239, 68, 68, 0.25)' : 'rgba(34, 197, 94, 0.2)',
-                        color: isDestroyed ? '#fca5a5' : '#86efac',
-                        border: isDestroyed ? '1px solid #ef4444' : '1px solid #22c55e'
-                      }}>
-                        {isDestroyed ? '🔥 مدمّرة بالكامل' : curH < maxH ? '⚠️ متضررة' : '✅ سليمة'}
-                      </span>
-                    </div>
-
-                    {/* Health bar */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#e5e7eb', marginBottom: '3px' }}>
-                      <span>نقاط الهيكل (HP):</span>
-                      <span style={{ fontWeight: 'bold', color: isDestroyed ? '#ef4444' : healthPct < 50 ? '#f59e0b' : '#10b981' }}>
-                        {curH.toLocaleString()} / {maxH.toLocaleString()} ({healthPct}%)
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '8px', background: '#262626', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        width: `${healthPct}%`, 
-                        height: '100%', 
-                        background: isDestroyed ? '#ef4444' : healthPct < 50 ? 'linear-gradient(90deg, #ef4444, #f59e0b)' : 'linear-gradient(90deg, #10b981, #059669)',
-                        transition: 'width 0.4s ease'
-                      }} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 1: Crew services / repairers from warehouse */}
-                <div style={{ marginBottom: '14px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>📦</span>
-                    <span>طواقم الصيانة من مستودعك:</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                    {/* Small Repairer */}
-                    <div style={{ 
-                      background: 'rgba(25, 20, 15, 0.85)', 
-                      border: '1px solid #443425', 
-                      borderRadius: '10px', 
-                      padding: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <img src={FIXER_SMALL_ICON} alt="مصلح صغير" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#fef08a' }}>مصلح صغير</div>
-                          <div style={{ fontSize: '9.5px', color: '#a8a29e' }}>+500 HP</div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#d1d5db' }}>لديك: <strong style={{ color: (crewServices.repairer_small || 0) > 0 ? '#4ade80' : '#ef4444' }}>{crewServices.repairer_small || 0}</strong></span>
-                        <button 
-                          disabled={(crewServices.repairer_small || 0) <= 0 || curH >= maxH}
-                          onClick={() => handleRepairShip(ship.id, 'small')}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: ((crewServices.repairer_small || 0) > 0 && curH < maxH) ? 'pointer' : 'not-allowed',
-                            background: ((crewServices.repairer_small || 0) > 0 && curH < maxH) ? '#16a34a' : '#4b5563',
-                            color: '#fff'
-                          }}
-                        >
-                          استخدام
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Medium Repairer */}
-                    <div style={{ 
-                      background: 'rgba(25, 20, 15, 0.85)', 
-                      border: '1px solid #443425', 
-                      borderRadius: '10px', 
-                      padding: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <img src={FIXER_MEDIUM_ICON} alt="مصلح وسط" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#fef08a' }}>مصلح وسط</div>
-                          <div style={{ fontSize: '9.5px', color: '#a8a29e' }}>+1,000 HP (أو 50%)</div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#d1d5db' }}>لديك: <strong style={{ color: (crewServices.repairer_medium || 0) > 0 ? '#4ade80' : '#ef4444' }}>{crewServices.repairer_medium || 0}</strong></span>
-                        <button 
-                          disabled={(crewServices.repairer_medium || 0) <= 0 || curH >= maxH}
-                          onClick={() => handleRepairShip(ship.id, 'medium')}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: ((crewServices.repairer_medium || 0) > 0 && curH < maxH) ? 'pointer' : 'not-allowed',
-                            background: ((crewServices.repairer_medium || 0) > 0 && curH < maxH) ? '#16a34a' : '#4b5563',
-                            color: '#fff'
-                          }}
-                        >
-                          استخدام
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Large Repairer */}
-                    <div style={{ 
-                      background: 'rgba(25, 20, 15, 0.85)', 
-                      border: '1px solid #443425', 
-                      borderRadius: '10px', 
-                      padding: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <img src={FIXER_LARGE_ICON} alt="مصلح كبير" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#fef08a' }}>مصلح كبير</div>
-                          <div style={{ fontSize: '9.5px', color: '#a8a29e' }}>100% إصلاح كامل</div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#d1d5db' }}>لديك: <strong style={{ color: (crewServices.repairer_large || 0) > 0 ? '#4ade80' : '#ef4444' }}>{crewServices.repairer_large || 0}</strong></span>
-                        <button 
-                          disabled={(crewServices.repairer_large || 0) <= 0 || curH >= maxH}
-                          onClick={() => handleRepairShip(ship.id, 'large')}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: ((crewServices.repairer_large || 0) > 0 && curH < maxH) ? 'pointer' : 'not-allowed',
-                            background: ((crewServices.repairer_large || 0) > 0 && curH < maxH) ? '#16a34a' : '#4b5563',
-                            color: '#fff'
-                          }}
-                        >
-                          استخدام
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Legendary Repairer */}
-                    <div style={{ 
-                      background: 'rgba(25, 20, 15, 0.85)', 
-                      border: '1px solid #443425', 
-                      borderRadius: '10px', 
-                      padding: '8px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <img src={FIXER_LEGENDARY_ICON} alt="مصلح أسطوري" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#fef08a' }}>مصلح أسطوري</div>
-                          <div style={{ fontSize: '9.5px', color: '#a8a29e' }}>100% كامل الأسطول</div>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                        <span style={{ fontSize: '10px', color: '#d1d5db' }}>لديك: <strong style={{ color: (crewServices.repairer_legendary || 0) > 0 ? '#4ade80' : '#ef4444' }}>{crewServices.repairer_legendary || 0}</strong></span>
-                        <button 
-                          disabled={(crewServices.repairer_legendary || 0) <= 0}
-                          onClick={() => handleRepairShip(ship.id, 'legendary')}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: (crewServices.repairer_legendary || 0) > 0 ? 'pointer' : 'not-allowed',
-                            background: (crewServices.repairer_legendary || 0) > 0 ? '#eab308' : '#4b5563',
-                            color: (crewServices.repairer_legendary || 0) > 0 ? '#000' : '#fff'
-                          }}
-                        >
-                          استخدام
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 2: Instant Harbor Workshop Options */}
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#facc15', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>⚡</span>
-                    <span>الصيانة الفورية بورشة الميناء:</span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Gold Repair */}
-                    <button
-                      disabled={curH >= maxH || gold < 500}
-                      onClick={() => handleRepairShip(ship.id, 'gold')}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '10px 14px',
-                        background: (curH < maxH && gold >= 500) ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'rgba(30, 25, 20, 0.6)',
-                        border: (curH < maxH && gold >= 500) ? '1px solid #facc15' : '1px solid #4b5563',
-                        borderRadius: '10px',
-                        cursor: (curH < maxH && gold >= 500) ? 'pointer' : 'not-allowed',
-                        color: '#fff'
-                      }}
-                    >
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#fde047' }}>إصلاح وترميم هذه السفينة بالكامل 100%</div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>استعادة كامل نقاط الصحة وإطفاء النيران فوراً</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#ca8a04', color: '#000', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>
-                        <span>🪙 500</span>
-                        <span>ذهب</span>
-                      </div>
-                    </button>
-
-                    {/* Gems Fleet Repair */}
-                    <button
-                      disabled={gems < 10}
-                      onClick={() => handleRepairShip(ship.id, 'gems')}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '10px 14px',
-                        background: gems >= 10 ? 'linear-gradient(135deg, #1e1b4b, #312e81)' : 'rgba(30, 25, 20, 0.6)',
-                        border: gems >= 10 ? '1px solid #818cf8' : '1px solid #4b5563',
-                        borderRadius: '10px',
-                        cursor: gems >= 10 ? 'pointer' : 'not-allowed',
-                        color: '#fff'
-                      }}
-                    >
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#c7d2fe' }}>ترميم كامل أسطول السفن دفعة واحدة 100%</div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>صيانة شاملة لجميع السفن وإعادة جاهزية الإبحار</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#4f46e5', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold' }}>
-                        <span>💎 10</span>
-                        <span>جواهر</span>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+        <ShipWorkshopModal
+          ship={ships.find(s => s.id === repairModalShip.id) || repairModalShip}
+          allShips={ships}
+          crewServices={crewServices}
+          onClose={() => setRepairModalShip(null)}
+          onRepair={handleRepairShip}
+          onSelectShip={(selected) => setRepairModalShip(selected)}
+          gold={gold}
+          gems={gems}
+        />
       )}
 
       {/* ----------------- CONFIRM SELL MODAL ----------------- */}
@@ -14975,14 +14800,156 @@ export default function App() {
             </div>
           )}
           {rewardFish.guided && (
-            <div style={{ margin: '6px 0', padding: '4px 10px', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid #38bdf8', borderRadius: '6px', color: '#7dd3fc', fontSize: '11px', fontWeight: 'bold' }}>
-              🧭 مرشد السفينة: صيد موحد ومتوقع لجميع سفن الأسطول!
+            <div style={{ margin: '6px 0', padding: '6px 12px', background: 'rgba(56, 189, 248, 0.25)', border: '1px solid #38bdf8', borderRadius: '8px', color: '#7dd3fc', fontSize: '11.5px', fontWeight: 'bold' }}>
+              🧭 مرشد السفينة: صيد متوقع ومضمون بنجاح [{rewardFish.name}] بدقة 100%!
             </div>
           )}
           <div style={{ margin: '6px 0', fontWeight: 'bold', color: '#38bdf8', fontSize: '12px' }}>📦 تمت إضافة الأسماك إلى بيت السمك لبيعها!</div>
           <button onClick={() => setRewardModal(false)} style={{ width: '100%', padding: '8px', marginTop: '8px', border: 'none', borderRadius: '5px', background: '#16a34a', color: '#fff', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>موافق</button>
         </div>
       )}
+
+      {/* ----------------- EXPECTED FISH SELECTOR MODAL (مرشد السفينة) ----------------- */}
+      {expectedFishModalShipId && (() => {
+        const targetShip = ships.find(s => s.id === expectedFishModalShipId);
+        if (!targetShip) return null;
+        const shipFishes = targetShip.fishTypes && targetShip.fishTypes.length > 0 
+          ? targetShip.fishTypes 
+          : ['السردين'];
+        const currentTarget = targetShip.expectedFish || shipFishes[shipFishes.length - 1];
+
+        return (
+          <div 
+            className="modal" 
+            style={{ 
+              display: 'block', 
+              maxWidth: '430px', 
+              background: 'linear-gradient(180deg, rgba(12, 18, 30, 0.98) 0%, rgba(6, 10, 20, 0.99) 100%)',
+              border: '2px solid #38bdf8',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(56, 189, 248, 0.35)',
+              borderRadius: '16px',
+              padding: '16px',
+              zIndex: 130
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(56, 189, 248, 0.4)', paddingBottom: '10px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '24px' }}>🧭</span>
+                <div style={{ textAlign: 'right' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#7dd3fc', fontWeight: '900' }}>
+                    مرشد السفينة: تحديد الصيد المتوقع
+                  </h3>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {targetShip.name} (المستوى {targetShip.level || 1})
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setExpectedFishModalShipId(null)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer', padding: '4px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Explanatory Info Card */}
+            <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px', padding: '8px 10px', marginBottom: '12px', fontSize: '11px', color: '#e2e8f0', lineHeight: 1.4, textAlign: 'right' }}>
+              🎯 <strong style={{ color: '#38bdf8' }}>توجيه المرشد:</strong> اختر نوع السمك الذي ترغب أن تتوقعه وتصطاده هذه السفينة في جميع رحلاتها بدقة 100%:
+            </div>
+
+            {/* Fish List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+              {shipFishes.map((fishName, idx) => {
+                const isSelected = currentTarget === fishName;
+                const emoji = getFishEmoji(fishName);
+                const info = FISH_REWARD_DATA[fishName] || FISH_REWARD_DATA[fishName.replace(/^ال/, '').trim()];
+                const price = info?.valPerFish;
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setShipExpectedFish(targetShip.id, fishName);
+                      setExpectedFishModalShipId(null);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      border: isSelected ? '1.5px solid #facc15' : '1px solid rgba(56, 189, 248, 0.25)',
+                      background: isSelected 
+                        ? 'linear-gradient(135deg, rgba(202, 138, 4, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%)' 
+                        : 'rgba(15, 23, 42, 0.7)',
+                      boxShadow: isSelected ? '0 0 12px rgba(250, 204, 21, 0.3)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '24px' }}>{emoji}</span>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 'bold', color: isSelected ? '#fef08a' : '#f8fafc' }}>
+                          {fishName}
+                        </div>
+                        {price !== undefined && (
+                          <div style={{ fontSize: '10.5px', color: '#fbbf24' }}>
+                            قيمة السمكة: {price} 🪙 ذهب
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      {isSelected ? (
+                        <span style={{ background: '#16a34a', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px' }}>
+                          ✔️ متوقع حالياً
+                        </span>
+                      ) : (
+                        <button
+                          style={{
+                            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                            color: '#fff',
+                            border: '1px solid #38bdf8',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          تحديد 🎯
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button 
+              onClick={() => setExpectedFishModalShipId(null)}
+              style={{
+                width: '100%',
+                marginTop: '12px',
+                padding: '8px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#334155',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              إغلاق
+            </button>
+          </div>
+        );
+      })()}
 
       {/* ----------------- FISH STORAGE MODAL (بيت السمك) ----------------- */}
       {fishStorageModal && (
@@ -15176,6 +15143,37 @@ export default function App() {
             return null;
           })()}
 
+          {/* Guide Expected Fish Quick Selector in Action Menu */}
+          {(() => {
+            const activeShip = ships.find(s => s.id === (currentShipId || menu.shipId));
+            const hasGuide = activeShip?.assignedCrew?.includes('guide');
+            if (hasGuide && activeShip) {
+              const curExpected = activeShip.expectedFish || (activeShip.fishTypes && activeShip.fishTypes[activeShip.fishTypes.length - 1]) || 'السردين';
+              return (
+                <div 
+                  className="menu-btn" 
+                  onClick={() => {
+                    setExpectedFishModalShipId(activeShip.id);
+                    setMenu(prev => ({ ...prev, visible: false }));
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                    color: '#fff',
+                    border: '1px solid #7dd3fc'
+                  }}
+                  title="تحديد وتوقع نوع السمك المستهدف بالمرشد"
+                >
+                  <div className="menu-icon">🧭</div>
+                  <div style={{ fontSize: '9px', lineHeight: 1.15, textAlign: 'center' }}>
+                    <div style={{ color: '#bae6fd' }}>صيد متوقع:</div>
+                    <div style={{ color: '#fef08a', fontWeight: 'bold' }}>{curExpected}</div>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           <div className="menu-btn" onClick={() => act('crew')}><div className="menu-icon">👥</div>طاقم</div>
           <div className="menu-btn" onClick={() => act('sell')}><div className="menu-icon">💰</div>بيع</div>
         </div>
@@ -15183,9 +15181,44 @@ export default function App() {
 
       {/* ----------------- TOP BAR / RESOURCES HUD ----------------- */}
       <div className="top-bar" dir="rtl">
-        <div className="resource-box" onClick={() => setActiveTab('settings')}>
-          <img className="res-icon" src="https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/IMG_20260702_004120.jpg" alt="Menu" />
-          <div className="res-label">القائمة (ليفل {playerLevel})</div>
+        <div 
+          className="resource-box" 
+          onClick={() => setShowWarLogModal(true)}
+          style={{ position: 'relative', cursor: 'pointer' }}
+          title="سجل التنبيهات والمعارك والغارات 💀"
+        >
+          <img 
+            className="res-icon" 
+            src="/assets/aistudio/IMG_20261105_161911_af22379c.jpg" 
+            alt="الجمجمة" 
+            style={{ borderRadius: '16px', objectFit: 'contain' }}
+          />
+          <div className="res-label">التنبيهات</div>
+          {attackLogs.some(a => !a.isAvenged) && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '-6px',
+                right: '-6px',
+                background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: '900',
+                padding: '2px 7px',
+                borderRadius: '9999px',
+                border: '1.5px solid #fecaca',
+                boxShadow: '0 0 10px #ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                animation: 'pulse 1.2s infinite',
+                zIndex: 10,
+              }}
+            >
+              <span>💥</span>
+              <span>{attackLogs.filter(a => !a.isAvenged).length}</span>
+            </span>
+          )}
         </div>
         <div className="resource-box" onClick={() => setActiveTab('shop')}>
           <img className="res-icon" src="https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/IMG_20260702_004010.png" alt="Gems" />
@@ -15566,25 +15599,25 @@ export default function App() {
         }} dir="rtl">
           <div style={{
             background: '#1c120c',
-            border: '3px solid #ca8a04',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.8)',
+            border: '3px solid #facc15',
+            borderRadius: '24px',
+            padding: '28px 20px',
+            maxWidth: '560px',
+            width: '95%',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.9), 0 0 40px rgba(234, 179, 8, 0.2)',
             textAlign: 'center',
-            color: '#cbd5e1'
+            color: '#e2e8f0'
           }}>
-            <h3 style={{ color: '#facc15', margin: '0 0 10px 0', fontSize: '20px', fontWeight: '900' }}>
+            <h3 style={{ color: '#facc15', margin: '0 0 12px 0', fontSize: '24px', fontWeight: '900' }}>
               ⚓ ترقية أسطول السفن (أقصى حد: 3 سفن)
             </h3>
-            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '20px', lineHeight: '1.6' }}>
-              لقد اخترت شراء/ترقية سفينة إلى <strong style={{ color: '#fff' }}>{upgradeTargetSpec.name} (ليفل {upgradeTargetSpec.level})</strong>.
+            <p style={{ fontSize: '15px', color: '#cbd5e1', marginBottom: '22px', lineHeight: '1.7' }}>
+              لقد اخترت شراء/ترقية سفينة إلى <strong style={{ color: '#fde047', fontSize: '16px' }}>{upgradeTargetSpec.name} (ليفل {upgradeTargetSpec.level})</strong>.
               <br />
               الرجاء تحديد إحدى سفنك الثلاث لتنزيل أو ترقية سفينتك فيها:
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
               {ships.slice(0, 3).map((ship) => {
                 const isAlreadyThisLevel = ship.exists && ship.level === upgradeTargetSpec.level;
                 return (
@@ -15599,15 +15632,15 @@ export default function App() {
                     }}
                     style={{
                       background: isAlreadyThisLevel 
-                        ? 'rgba(30, 41, 59, 0.6)'
+                        ? 'rgba(30, 41, 59, 0.7)'
                         : ship.exists 
-                          ? 'linear-gradient(to bottom, #2b1a0a, #140c06)'
+                          ? 'linear-gradient(to bottom, #2d1808, #180d05)'
                           : 'linear-gradient(to bottom, #1e1b4b, #0f172a)',
                       border: isAlreadyThisLevel 
-                        ? '1.5px solid #475569'
-                        : ship.exists ? '2px solid #ca8a04' : '2px dashed #3b82f6',
-                      borderRadius: '12px',
-                      padding: '12px',
+                        ? '2px solid #475569'
+                        : ship.exists ? '2px solid #eab308' : '2px dashed #38bdf8',
+                      borderRadius: '16px',
+                      padding: '16px 14px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
@@ -15615,17 +15648,18 @@ export default function App() {
                       opacity: isAlreadyThisLevel ? 0.75 : 1,
                       transition: 'all 0.2s',
                       textAlign: 'right',
-                      width: '100%'
+                      width: '100%',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '24px' }}>{ship.exists ? (ship.imgEmoji || '⛵') : '➕'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '32px' }}>{ship.exists ? (ship.imgEmoji || '⛵') : '➕'}</span>
                       <div>
-                        <div style={{ color: isAlreadyThisLevel ? '#94a3b8' : ship.exists ? '#fff' : '#3b82f6', fontWeight: 'bold', fontSize: '14px' }}>
+                        <div style={{ color: isAlreadyThisLevel ? '#94a3b8' : ship.exists ? '#fff' : '#38bdf8', fontWeight: '900', fontSize: '16px' }}>
                           {ship.exists ? ship.name : 'مكان فارغ (سفينة مباعة)'}
-                          {isAlreadyThisLevel && <span style={{ color: '#f59e0b', fontSize: '11px', marginRight: '6px' }}>(بهذا المستوى بالفعل ✔)</span>}
+                          {isAlreadyThisLevel && <span style={{ color: '#f59e0b', fontSize: '12px', marginRight: '6px' }}>(بهذا المستوى بالفعل ✔)</span>}
                         </div>
-                        <div style={{ color: isAlreadyThisLevel ? '#eab308' : '#94a3b8', fontSize: '11px' }}>
+                        <div style={{ color: isAlreadyThisLevel ? '#eab308' : '#94a3b8', fontSize: '13px', fontWeight: 'bold', marginTop: '2px' }}>
                           {isAlreadyThisLevel 
                             ? `هذه السفينة في المستوى ${ship.level} بالفعل - اختر سفينة أخرى لامتلاك أكثر من سفينة بنفس المستوى`
                             : ship.exists ? `المستوى الحالي: ${ship.level} ➔ سيصبح: ${upgradeTargetSpec.level}` : 'انقر لشراء وتنزيل السفينة هنا'}
@@ -15633,13 +15667,13 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{
-                      background: isAlreadyThisLevel ? '#334155' : ship.exists ? '#16a34a' : '#2563eb',
+                      background: isAlreadyThisLevel ? '#334155' : ship.exists ? '#16a34a' : '#0284c7',
                       color: isAlreadyThisLevel ? '#94a3b8' : '#fff',
-                      borderRadius: '8px',
-                      padding: '4px 12px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      boxShadow: isAlreadyThisLevel ? 'none' : ship.exists ? '0 2px 4px rgba(22, 163, 74, 0.3)' : '0 2px 4px rgba(37, 99, 235, 0.3)'
+                      borderRadius: '10px',
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      fontWeight: '900',
+                      boxShadow: isAlreadyThisLevel ? 'none' : ship.exists ? '0 3px 6px rgba(22, 163, 74, 0.4)' : '0 3px 6px rgba(2, 132, 199, 0.4)'
                     }}>
                       {isAlreadyThisLevel ? 'مملوك بالفعل ✔' : ship.exists ? 'ترقية هذه السفينة ⚡' : 'شراء وتنزيل هنا ➕'}
                     </div>
@@ -15651,14 +15685,16 @@ export default function App() {
             <button
               onClick={() => setUpgradeTargetSpec(null)}
               style={{
-                background: '#475569',
+                background: '#334155',
                 color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 20px',
-                fontSize: '13px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
+                border: '1px solid #475569',
+                borderRadius: '12px',
+                padding: '12px 32px',
+                fontSize: '16px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
               }}
             >
               إلغاء العملية
@@ -15673,7 +15709,22 @@ export default function App() {
         onDismiss={handleDismissNotification}
         isSoundEnabled={!isSfxMuted && !isMuted}
         onToggleSound={handleToggleNotifSound}
+        onRevenge={handleRevenge}
+        onOpenWarLog={() => setShowWarLogModal(true)}
       />
+
+      {/* War & Revenge Log Modal (سجل الغارات والانتقام والدعوم) */}
+      {showWarLogModal && (
+        <WarLogModal
+          onClose={() => setShowWarLogModal(false)}
+          onRevenge={handleRevenge}
+          onClaimGift={handleClaimGift}
+          battleReports={battleReports}
+          attackLogs={attackLogs}
+          supportGifts={supportGifts}
+          onClearLogs={handleClearLogs}
+        />
+      )}
     </div>
   );
 }

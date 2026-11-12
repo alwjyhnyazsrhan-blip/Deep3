@@ -1,11 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default Deny Catch-All
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -14,16 +9,50 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    // USERS COLLECTION
+    // All players can read profiles for multiplayer leaderboards, clan rosters, and harbor visits
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isOwner(userId);
     }
 
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && isValidId(userId);
-      allow update: if isOwner(userId) && isValidId(userId);
-      allow delete: if isOwner(userId);
+    // TRIBES COLLECTION
+    // Allows viewing, creating, joining, leaving, and donating to clans
+    match /tribes/{tribeId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isSignedIn();
+    }
+
+    // CHATS COLLECTION
+    match /chats/{chatId} {
+      allow read, write: if true;
+    }
+
+    // FRIEND REQUESTS
+    match /friendRequests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // SUPPORT TICKETS
+    match /support_tickets/{ticketId} {
+      allow read, write: if true;
+    }
+
+    // HARBOR EVENTS & NOTIFICATIONS
+    match /harborEvents/{eventId} {
+      allow read, write: if true;
+    }
+
+    match /globalNotifications/{notifId} {
+      allow read, write: if true;
+    }
+
+    // TEST CONNECTION
+    match /test/{docId} {
+      allow read, write: if true;
     }
   }
 }

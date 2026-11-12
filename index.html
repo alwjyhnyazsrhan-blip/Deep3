@@ -146,9 +146,19 @@
         }, 150);
       };
       window.addEventListener('error', function(e) {
+        var msg = e.message || '';
+        if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('ws://') !== -1 || msg.indexOf('wss://') !== -1 || msg.indexOf('closed without opened') !== -1) {
+          e.preventDefault();
+          return;
+        }
         console.error('[CRITICAL APPLICATION ERROR]', e);
       });
       window.addEventListener('unhandledrejection', function(e) {
+        var reasonMsg = e.reason ? (e.reason.message || String(e.reason)) : '';
+        if (reasonMsg.indexOf('WebSocket') !== -1 || reasonMsg.indexOf('ws://') !== -1 || reasonMsg.indexOf('wss://') !== -1 || reasonMsg.indexOf('closed without opened') !== -1) {
+          e.preventDefault();
+          return;
+        }
         console.error('[UNHANDLED PROMISE REJECTION]', e.reason);
       });
     </script>

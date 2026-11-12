@@ -22,11 +22,13 @@ interface CrewTavernModalProps {
     price: number,
     incrementCount?: number,
     costType?: 'gold' | 'gems',
-    targetShipId?: string
+    targetShipId?: string,
+    quantity?: number
   ) => void;
   unassignCrewFromShip?: (key: string, shipId: string) => void;
   unassignCrewFromAllShips?: (key: string) => void;
   assignCrewToAllShips?: (key: string) => void;
+  crewInventory?: Record<string, number>;
   onToggleAutoFishing?: (shipId: string) => void;
 }
 
@@ -45,9 +47,12 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
   unassignCrewFromShip,
   unassignCrewFromAllShips,
   assignCrewToAllShips,
+  crewInventory = {},
   onToggleAutoFishing,
 }) => {
   const [filterCategory, setFilterCategory] = useState<'all' | 'crew' | 'fixers'>('all');
+  const [tavernCrewMultipliers, setTavernCrewMultipliers] = useState<Record<string, number>>({});
+  const [globalTavernMultiplier, setGlobalTavernMultiplier] = useState<number>(1);
   const existingShips = ships.filter(s => s.exists);
   const [selectedShipId, setSelectedShipId] = useState<string>(() => {
     return currentShipId || existingShips[0]?.id || 's1';
@@ -118,6 +123,24 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
           updated.gold_fisher = false;
         }
         localStorage.setItem('pirate_crew_services', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  };
+
+  const handleSelectExpectedFish = (shipId: string, fishName: string) => {
+    if (setShips) {
+      setShips(prev => {
+        const updated = prev.map(s => {
+          if (s.id === shipId) {
+            return {
+              ...s,
+              expectedFish: fishName
+            };
+          }
+          return s;
+        });
+        localStorage.setItem('pirate_ships_v2', JSON.stringify(updated));
         return updated;
       });
     }
@@ -459,6 +482,140 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
         </button>
       </div>
 
+      {/* GLOBAL CREW MULTIPLIER & CUSTOM QUANTITY BANNER (خانة إضافة الكمية حسب رغبتك) */}
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '890px',
+          margin: '0 auto 12px auto',
+          background: 'linear-gradient(90deg, #1e1b4b, #312e81, #1e1b4b)',
+          border: '1.5px solid #818cf8',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '20px' }}>👥</span>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: '900', color: '#e0e7ff' }}>
+              مضاعفة كمية الشراء لكافة الطواقم (تحديد كم ماتبي)
+            </div>
+            <div style={{ fontSize: '10.5px', color: '#a5b4fc' }}>
+              حدد أي رقم تريده لتوظيف 3 أو 4 أو أكثر دفعة واحدة لكل فرد طاقم
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '3px 6px', borderRadius: '8px', border: '1px solid #6366f1' }}>
+            <button
+              type="button"
+              onClick={() => setGlobalTavernMultiplier(prev => Math.max(1, prev - 1))}
+              style={{
+                width: '26px',
+                height: '24px',
+                borderRadius: '5px',
+                border: 'none',
+                background: '#ef4444',
+                color: '#fff',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              -
+            </button>
+            <input
+              type="number"
+              min="1"
+              max="9999"
+              value={globalTavernMultiplier}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setGlobalTavernMultiplier(isNaN(val) || val < 1 ? 1 : val);
+              }}
+              style={{
+                width: '60px',
+                height: '24px',
+                borderRadius: '5px',
+                border: '1px solid #818cf8',
+                background: '#0f172a',
+                color: '#facc15',
+                textAlign: 'center',
+                fontWeight: '900',
+                fontSize: '13px',
+              }}
+              title="أدخل أي كمية تريدها"
+            />
+            <button
+              type="button"
+              onClick={() => setGlobalTavernMultiplier(prev => prev + 1)}
+              style={{
+                width: '26px',
+                height: '24px',
+                borderRadius: '5px',
+                border: 'none',
+                background: '#22c55e',
+                color: '#fff',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+              }}
+            >
+              +
+            </button>
+          </div>
+
+          {[1, 3, 4, 5, 10, 50].map(mult => (
+            <button
+              key={mult}
+              type="button"
+              onClick={() => setGlobalTavernMultiplier(mult)}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: globalTavernMultiplier === mult ? '1.5px solid #facc15' : '1px solid rgba(255,255,255,0.2)',
+                background: globalTavernMultiplier === mult ? '#4f46e5' : 'rgba(0,0,0,0.4)',
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              {mult}x
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              const updated: Record<string, number> = {};
+              filteredItems.forEach(c => {
+                updated[c.id] = globalTavernMultiplier;
+              });
+              setTavernCrewMultipliers(prev => ({ ...prev, ...updated }));
+            }}
+            style={{
+              padding: '5px 12px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: '#000',
+              fontWeight: '900',
+              fontSize: '11px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)',
+            }}
+          >
+            تطبيق على كافة الطواقم ⚡
+          </button>
+        </div>
+      </div>
+
       {/* Cards Grid */}
       <div
         style={{
@@ -474,14 +631,16 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
         {filteredItems.map(item => {
           const isFixer = item.id.startsWith('fixer');
           const assignedToCurrent = isAssignedToCurrentShip(item.id);
+          const normId = normalizeCrewId(item.id);
+          const ownedQty = (crewInventory && (crewInventory[item.id] || crewInventory[normId] || (item.id === 'police' ? crewInventory['cop'] : 0) || (item.id === 'sailors' ? crewInventory['sailor'] : 0))) || (assignedToCurrent ? 1 : 0);
 
           return (
             <div
               key={item.id}
               style={{
                 width: '275px',
-                height: '400px',
-                minWidth: '275px',
+                height: '475px',
+                minHeight: '475px',
                 maxWidth: '275px',
                 borderRadius: '16px',
                 border: assignedToCurrent ? '2.5px solid #22c55e' : '2px solid rgba(234, 179, 8, 0.75)',
@@ -565,6 +724,7 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                   zIndex: 10,
                 }}
               >
+                {/* Category Badge */}
                 <div
                   style={{
                     background: 'rgba(10, 15, 30, 0.85)',
@@ -585,23 +745,42 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                   <span>{isFixer ? 'صيانة وإصلاح' : 'طاقم بحري'}</span>
                 </div>
 
+                {/* Owned Badge */}
                 <div
                   style={{
-                    background: assignedToCurrent
-                      ? 'rgba(22, 163, 74, 0.95)'
-                      : item.costType === 'gold'
-                        ? 'rgba(234, 179, 8, 0.95)'
-                        : 'rgba(56, 189, 248, 0.95)',
-                    color: assignedToCurrent ? '#ffffff' : item.costType === 'gold' ? '#000000' : '#ffffff',
-                    border: assignedToCurrent
-                      ? '1px solid #4ade80'
-                      : item.costType === 'gold'
-                        ? '1px solid #fef08a'
-                        : '1px solid #7dd3fc',
+                    background: ownedQty > 0 ? 'rgba(79, 70, 229, 0.9)' : 'rgba(30, 41, 59, 0.85)',
+                    color: '#ffffff',
+                    border: ownedQty > 0 ? '1px solid #818cf8' : '1px solid rgba(255,255,255,0.2)',
                     borderRadius: '8px',
-                    fontSize: '11.5px',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    padding: '3px 8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                  title="العدد الإجمالي المملوك لديك من هذا الطاقم"
+                >
+                  <span>🎒 المملوك:</span>
+                  <span style={{ color: '#fde047' }}>{ownedQty}</span>
+                </div>
+
+                {/* Price Badge */}
+                <div
+                  style={{
+                    background: item.costType === 'gold'
+                      ? 'rgba(234, 179, 8, 0.95)'
+                      : 'rgba(56, 189, 248, 0.95)',
+                    color: item.costType === 'gold' ? '#000000' : '#ffffff',
+                    border: item.costType === 'gold'
+                      ? '1px solid #fef08a'
+                      : '1px solid #7dd3fc',
+                    borderRadius: '8px',
+                    fontSize: '11px',
                     fontWeight: 'bold',
-                    padding: '3px 10px',
+                    padding: '3px 8px',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
                     backdropFilter: 'blur(4px)',
                     display: 'flex',
@@ -609,14 +788,8 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                     gap: '3px',
                   }}
                 >
-                  {assignedToCurrent ? (
-                    <span>✔️ مُعيّن على هذه السفينة</span>
-                  ) : (
-                    <>
-                      <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
-                      <span>{item.costType === 'gold' ? item.price.toLocaleString() : item.price}</span>
-                    </>
-                  )}
+                  <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
+                  <span>{item.costType === 'gold' ? item.price.toLocaleString() : item.price}</span>
                 </div>
               </div>
 
@@ -710,11 +883,158 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                   const isGHAssignedAny = ghAssignedCount > 0;
                   const isGHAssignedAll = ghAssignedCount >= existingShips.length && existingShips.length > 0;
 
+                  const selectedCrewQty = tavernCrewMultipliers[item.id] || 1;
+                  const totalCrewCost = item.price * selectedCrewQty;
+
+                  // Quantity Controls Component (خانة تحديد الكمية: أضف كم ماتبي 3 أو 4 أو غيرها)
+                  const quantityBox = (
+                    <div style={{ width: '100%', background: 'rgba(0,0,0,0.45)', padding: '4px 6px', borderRadius: '8px', border: '1px solid rgba(250, 204, 21, 0.4)', marginTop: '3px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10.5px', color: '#fef08a', marginBottom: '3px', fontWeight: 'bold' }}>
+                        <span>🔢 خانة الكمية (كم ماتبي):</span>
+                        <span style={{ color: '#facc15', fontWeight: '900' }}>{selectedCrewQty}x فرد</span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = Math.max(1, selectedCrewQty - 1);
+                            setTavernCrewMultipliers(prev => ({ ...prev, [item.id]: next }));
+                          }}
+                          style={{
+                            width: '24px',
+                            height: '22px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(239, 68, 68, 0.5)',
+                            color: '#ffffff',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -
+                        </button>
+
+                        <input
+                          type="number"
+                          min="1"
+                          max="9999"
+                          value={selectedCrewQty}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            const next = isNaN(val) || val < 1 ? 1 : val;
+                            setTavernCrewMultipliers(prev => ({ ...prev, [item.id]: next }));
+                          }}
+                          style={{
+                            width: '58px',
+                            height: '22px',
+                            borderRadius: '4px',
+                            border: '1.5px solid #facc15',
+                            background: '#090d16',
+                            color: '#facc15',
+                            textAlign: 'center',
+                            fontSize: '12px',
+                            fontWeight: '900',
+                            padding: '0 2px'
+                          }}
+                          title="أدخل أي كمية تريدها"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = selectedCrewQty + 1;
+                            setTavernCrewMultipliers(prev => ({ ...prev, [item.id]: next }));
+                          }}
+                          style={{
+                            width: '24px',
+                            height: '22px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(34, 197, 94, 0.5)',
+                            color: '#ffffff',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Presets: 1, 3, 4, 5, 10, 50 */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', flexWrap: 'wrap' }}>
+                        {[1, 3, 4, 5, 10, 50].map(multiplier => {
+                          const isSelected = selectedCrewQty === multiplier;
+                          return (
+                            <button
+                              key={multiplier}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTavernCrewMultipliers(prev => ({ ...prev, [item.id]: multiplier }));
+                              }}
+                              style={{
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                border: isSelected ? '1.5px solid #facc15' : '1px solid rgba(255, 255, 255, 0.2)',
+                                background: isSelected ? 'linear-gradient(to bottom, #ca8a04, #854d0e)' : 'rgba(0, 0, 0, 0.5)',
+                                color: isSelected ? '#ffffff' : '#d1d5db',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {multiplier}x
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+
+                  const buyBtn = (btnText: string) => (
+                    <button
+                      onClick={() => {
+                        buyCrewService(item.id, item.title, totalCrewCost, 0, item.costType, selectedShipId, selectedCrewQty);
+                      }}
+                      style={{
+                        width: '100%',
+                        background: item.costType === 'gold'
+                          ? 'linear-gradient(to bottom, #f59e0b, #d97706)'
+                          : 'linear-gradient(to bottom, #0284c7, #0369a1)',
+                        color: '#fff',
+                        border: item.costType === 'gold' ? '1px solid #fde68a' : '1px solid #bae6fd',
+                        borderRadius: '8px',
+                        padding: '6px 0',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        boxShadow: item.costType === 'gold'
+                          ? '0 4px 12px rgba(245, 158, 11, 0.4)'
+                          : '0 4px 12px rgba(2, 132, 199, 0.4)',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      <span>🛒 {btnText} ({selectedCrewQty}x)</span>
+                      <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
+                      <span>{item.costType === 'gold' ? totalCrewCost.toLocaleString() : totalCrewCost}</span>
+                    </button>
+                  );
+
                   if (isGH) {
                     if (isGHAssignedAny) {
                       const isPaused = currentShip?.autoFishingPaused;
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {/* Fleet Status Badge */}
                           <div
                             style={{
@@ -722,8 +1042,8 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                               color: '#4ade80',
                               border: '1px solid #16a34a',
                               borderRadius: '8px',
-                              padding: '5px 8px',
-                              fontSize: '11px',
+                              padding: '4px 6px',
+                              fontSize: '10.5px',
                               fontWeight: 'bold',
                               textAlign: 'center',
                               boxShadow: '0 0 10px rgba(34, 197, 94, 0.2)',
@@ -732,8 +1052,8 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                               justifyContent: 'space-between',
                             }}
                           >
-                            <span>🔱 {isGHAssignedAll ? 'مُعيّن على كامل الأسطول (3 سفن)' : `مُعيّن على (${ghAssignedCount}/${existingShips.length}) سفن`}</span>
-                            <span style={{ fontSize: '10px', color: '#fef08a' }}>24/7 صيد وجمع</span>
+                            <span>🔱 {isGHAssignedAll ? 'مُعيّن على كامل الأسطول' : `مُعيّن على (${ghAssignedCount}/${existingShips.length}) سفن`}</span>
+                            <span style={{ fontSize: '9.5px', color: '#fef08a' }}>24/7 صيد</span>
                           </div>
 
                           {/* Pause / Resume Button */}
@@ -753,53 +1073,45 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                             }}
                             style={{
                               width: '100%',
-                              padding: '6px 0',
-                              borderRadius: '8px',
-                              fontSize: '11.5px',
+                              padding: '4px 0',
+                              borderRadius: '6px',
+                              fontSize: '10.5px',
                               fontWeight: 'bold',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: '6px',
+                              gap: '4px',
                               background: isPaused
                                 ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
                                 : 'linear-gradient(135deg, #b45309 0%, #78350f 100%)',
                               color: '#ffffff',
                               border: isPaused ? '1px solid #34d399' : '1px solid #facc15',
-                              boxShadow: isPaused ? '0 0 10px rgba(52, 211, 153, 0.4)' : '0 0 10px rgba(250, 204, 21, 0.3)',
                             }}
                           >
-                            <span>{isPaused ? '▶️ تشغيل واستئناف الصيد التلقائي' : '⏸️ إيقاف الصيد التلقائي مؤقتاً'}</span>
+                            <span>{isPaused ? '▶️ تشغيل الصيد التلقائي' : '⏸️ إيقاف مؤقت'}</span>
                           </button>
 
                           {/* Action Row: Cancel Everywhere + Assign to All */}
-                          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             <button
                               onClick={() => {
                                 handleUnassignAll(item.id);
                                 alert('🗑️ تم إلغاء تعيين الصياد الذهبي وسحبه من كافة سفن الأسطول بنجاح!');
                               }}
-                              title="إلغاء التعيين من كافة السفن"
                               style={{
                                 flex: 1,
-                                minWidth: '110px',
                                 background: 'rgba(239, 68, 68, 0.25)',
                                 color: '#fca5a5',
                                 border: '1px solid #ef4444',
-                                borderRadius: '8px',
-                                padding: '6px 4px',
-                                fontSize: '11px',
+                                borderRadius: '6px',
+                                padding: '3px 4px',
+                                fontSize: '10px',
                                 fontWeight: 'bold',
                                 cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
                               }}
                             >
-                              <span>🗑️</span>
-                              <span>إلغاء من الكل ✖</span>
+                              إلغاء من الكل ✖
                             </button>
 
                             {assignedToCurrent && (
@@ -808,23 +1120,18 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                                   handleUnassignSingle(item.id, selectedShipId);
                                   alert(`🗑️ تم إلغاء تعيين الصياد الذهبي من [${currentShip?.name}] بنجاح!`);
                                 }}
-                                title="إلغاء التعيين من السفينة الحالية فقط"
                                 style={{
                                   background: 'rgba(239, 68, 68, 0.2)',
                                   color: '#fca5a5',
                                   border: '1px solid #ef4444',
-                                  borderRadius: '8px',
-                                  padding: '6px 8px',
-                                  fontSize: '11px',
+                                  borderRadius: '6px',
+                                  padding: '3px 6px',
+                                  fontSize: '10px',
                                   fontWeight: 'bold',
                                   cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
                                 }}
                               >
-                                <span>إلغاء من هذه السفينة ✖</span>
+                                إلغاء من السفينة ✖
                               </button>
                             )}
 
@@ -834,63 +1141,34 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                                   handleAssignAll(item.id);
                                   alert('🌐 تم تعيين الصياد الذهبي على كافة سفن الأسطول الثلاث بنجاح!');
                                 }}
-                                title="تعيين على جميع السفن الثلاث"
                                 style={{
                                   flex: 1,
-                                  minWidth: '110px',
                                   background: 'linear-gradient(135deg, #ca8a04 0%, #854d0e 100%)',
                                   color: '#ffffff',
                                   border: '1px solid #facc15',
-                                  borderRadius: '8px',
-                                  padding: '6px 4px',
-                                  fontSize: '11px',
+                                  borderRadius: '6px',
+                                  padding: '3px 4px',
+                                  fontSize: '10px',
                                   fontWeight: 'bold',
                                   cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '4px',
                                 }}
                               >
-                                <span>🌐</span>
-                                <span>تعيين للثلاث سفن</span>
+                                تعيين للثلاث سفن 🌐
                               </button>
                             )}
                           </div>
+
+                          {/* Also show quantity selection and buy extra */}
+                          {quantityBox}
+                          {buyBtn('توظيف وشراء إضافي')}
                         </div>
                       );
                     } else {
                       return (
-                        <button
-                          onClick={() => {
-                            buyCrewService(item.id, item.title, item.price, 0, item.costType, selectedShipId);
-                          }}
-                          style={{
-                            width: '100%',
-                            background: item.costType === 'gold'
-                              ? 'linear-gradient(to bottom, #f59e0b, #d97706)'
-                              : 'linear-gradient(to bottom, #0284c7, #0369a1)',
-                            color: '#fff',
-                            border: item.costType === 'gold' ? '1px solid #fde68a' : '1px solid #bae6fd',
-                            borderRadius: '8px',
-                            padding: '8px 0',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            boxShadow: item.costType === 'gold'
-                              ? '0 4px 12px rgba(245, 158, 11, 0.4)'
-                              : '0 4px 12px rgba(2, 132, 199, 0.4)',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '5px',
-                          }}
-                        >
-                          <span>توظيف وتعيين لجميع السفن (3 سفن)</span>
-                          <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
-                          <span>{item.price.toLocaleString()}</span>
-                        </button>
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          {quantityBox}
+                          {buyBtn('توظيف وتعيين')}
+                        </div>
                       );
                     }
                   }
@@ -898,81 +1176,98 @@ export const CrewTavernModal: React.FC<CrewTavernModalProps> = ({
                   // Non-Golden Hunter crew and fixers
                   if (assignedToCurrent) {
                     return (
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <div
-                          style={{
-                            flex: 1,
-                            background: 'rgba(22, 163, 74, 0.25)',
-                            color: '#4ade80',
-                            border: '1px solid #16a34a',
-                            borderRadius: '8px',
-                            padding: '7px 0',
-                            fontSize: '11.5px',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            boxShadow: '0 0 10px rgba(34, 197, 94, 0.2)',
-                          }}
-                        >
-                          ✔️ مُعيّن على {currentShip?.name}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <div
+                            style={{
+                              flex: 1,
+                              background: 'rgba(22, 163, 74, 0.25)',
+                              color: '#4ade80',
+                              border: '1px solid #16a34a',
+                              borderRadius: '8px',
+                              padding: '5px 0',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              textAlign: 'center',
+                              boxShadow: '0 0 10px rgba(34, 197, 94, 0.2)',
+                            }}
+                          >
+                            ✔️ مُعيّن على {currentShip?.name}
+                          </div>
+                          <button
+                            onClick={() => {
+                              handleUnassignSingle(item.id, selectedShipId);
+                              alert(`🗑️ تم إلغاء تعيين [${item.title}] من [${currentShip?.name}] بنجاح!`);
+                            }}
+                            title="إلغاء تعيين هذا الطاقم"
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.3)',
+                              color: '#fca5a5',
+                              border: '1px solid #ef4444',
+                              borderRadius: '8px',
+                              padding: '0 10px',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <span>إلغاء</span>
+                            <span>✖</span>
+                          </button>
                         </div>
-                        <button
-                          onClick={() => {
-                            handleUnassignSingle(item.id, selectedShipId);
-                            alert(`🗑️ تم إلغاء تعيين [${item.title}] من [${currentShip?.name}] بنجاح!`);
-                          }}
-                          title="إلغاء تعيين هذا الطاقم"
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.3)',
-                            color: '#fca5a5',
-                            border: '1px solid #ef4444',
-                            borderRadius: '8px',
-                            padding: '0 12px',
-                            fontSize: '11.5px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <span>إلغاء</span>
-                          <span>✖</span>
-                        </button>
+
+                        {/* Guide Expected Fish Selector */}
+                        {item.id === 'guide' && currentShip && (
+                          <div style={{ background: 'rgba(2, 132, 199, 0.2)', border: '1px solid #38bdf8', borderRadius: '8px', padding: '4px 6px' }}>
+                            <div style={{ fontSize: '10px', color: '#7dd3fc', fontWeight: 'bold', marginBottom: '3px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>🧭 السمك المتوقع:</span>
+                              <span style={{ color: '#fef08a' }}>{currentShip.expectedFish || (currentShip.fishTypes && currentShip.fishTypes[currentShip.fishTypes.length - 1]) || 'السردين'} 🐟</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                              {(currentShip.fishTypes && currentShip.fishTypes.length > 0 ? currentShip.fishTypes : ['السردين']).map((fName, fIdx) => {
+                                const isSel = (currentShip.expectedFish || currentShip.fishTypes?.[currentShip.fishTypes.length - 1]) === fName;
+                                return (
+                                  <button
+                                    key={fIdx}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectExpectedFish(currentShip.id, fName);
+                                    }}
+                                    style={{
+                                      padding: '2px 5px',
+                                      borderRadius: '4px',
+                                      fontSize: '9.5px',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      border: isSel ? '1.5px solid #facc15' : '1px solid rgba(56, 189, 248, 0.4)',
+                                      background: isSel ? 'linear-gradient(135deg, #ca8a04, #854d0e)' : 'rgba(15, 23, 42, 0.8)',
+                                      color: isSel ? '#ffffff' : '#93c5fd',
+                                    }}
+                                  >
+                                    {isSel ? '🎯 ' : ''}{fName}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Also allow buying more even if already assigned! */}
+                        {quantityBox}
+                        {buyBtn('توظيف وشراء إضافي')}
                       </div>
                     );
                   }
 
                   return (
-                    <button
-                      onClick={() => {
-                        buyCrewService(item.id, item.title, item.price, 0, item.costType, selectedShipId);
-                      }}
-                      style={{
-                        width: '100%',
-                        background: item.costType === 'gold'
-                          ? 'linear-gradient(to bottom, #f59e0b, #d97706)'
-                          : 'linear-gradient(to bottom, #0284c7, #0369a1)',
-                        color: '#fff',
-                        border: item.costType === 'gold' ? '1px solid #fde68a' : '1px solid #bae6fd',
-                        borderRadius: '8px',
-                        padding: '7px 0',
-                        fontSize: '12.5px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        boxShadow: item.costType === 'gold'
-                          ? '0 4px 12px rgba(245, 158, 11, 0.4)'
-                          : '0 4px 12px rgba(2, 132, 199, 0.4)',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '5px',
-                      }}
-                    >
-                      <span>{isFixer ? 'توظيف وتعيين المصلح' : 'توظيف وتعيين للسفينة'}</span>
-                      <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
-                      <span>{item.costType === 'gold' ? item.price.toLocaleString() : item.price}</span>
-                    </button>
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {quantityBox}
+                      {buyBtn(isFixer ? 'توظيف وتعيين' : 'توظيف وتعيين')}
+                    </div>
                   );
                 })()}
               </div>

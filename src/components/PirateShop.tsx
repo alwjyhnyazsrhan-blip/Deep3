@@ -30,8 +30,8 @@ interface PirateShopProps {
   playerLevel: number;
   exp?: number;
   buyShipLevel: (spec: any) => void;
-  buyWeaponItem: (itemId: string, costType: 'gold' | 'blueGems', costValue: number) => void;
-  buyCrewService: (key: string, name: string, price: number) => void;
+  buyWeaponItem?: (itemId: string, costType: 'gold' | 'blueGems', costValue: number, quantity?: number) => void;
+  buyCrewService: (key: string, name: string, price: number, incrementCount?: number, costType?: 'gold' | 'gems', targetShipId?: string, quantity?: number) => void;
   buyShopItem: (type: 'ship' | 'net' | 'engine' | 'gold_pack', costGold: number, costGems: number) => void;
   crewInventory?: Record<string, number>;
   setCrewInventory?: React.Dispatch<React.SetStateAction<Record<string, number>>>;
@@ -278,11 +278,15 @@ export default function PirateShop({
   buyItem,
 }: PirateShopProps) {
   const [shopSubTab, setShopSubTab] = useState<
-    'defense' | 'hamour' | 'crew_services' | 'vip' | 'backgrounds' | 'recharge'
+    'defense' | 'hamour' | 'crew_services' | 'backgrounds' | 'recharge'
   >('defense');
   const [hideCards, setHideCards] = useState(false);
   const [payingItem, setPayingItem] = useState<any | null>(null);
   const [paymentStep, setPaymentStep] = useState<'details' | 'loading' | 'success'>('details');
+  const [weaponBuyMultipliers, setWeaponBuyMultipliers] = useState<Record<string, number>>({});
+  const [globalWeaponMultiplier, setGlobalWeaponMultiplier] = useState<number>(1);
+  const [crewBuyMultipliers, setCrewBuyMultipliers] = useState<Record<string, number>>({});
+  const [globalCrewMultiplier, setGlobalCrewMultiplier] = useState<number>(1);
 
   const [cardNumber, setCardNumber] = useState('4220 5689 3110 4452');
   const [cardHolder, setCardHolder] = useState('القبطان الشجاع');
@@ -340,28 +344,6 @@ export default function PirateShop({
     }, 1500);
   };
 
-  const claimVipReward = async () => {
-    if (!isNetworkOnline()) {
-      notifyOfflineBlocked('استلام مكافأة VIP اليومية');
-      return;
-    }
-
-    const res = await executeFinancialTransaction({
-      goldDelta: 10000,
-      gemsDelta: 500,
-      reason: 'استلام مكافأة عضو VIP اليومية',
-      onLocalApply: () => {
-        setGems(prev => prev + 500);
-        setGold(prev => prev + 10000);
-      }
-    });
-
-    if (res.success) {
-      if (typeof res.newGold === 'number') setGold(res.newGold);
-      if (typeof res.newGems === 'number') setGems(res.newGems);
-      alert('🎁 تم استلام المكافأة اليومية كعضو VIP عبر المعاملة الذرية: +500 💎 جوهرة و +10,000 🪙 ذهب!');
-    }
-  };
 
   const buyBackground = async (bg: any) => {
     if (bg.isFree || bg.priceGold === 0) {
@@ -713,7 +695,6 @@ export default function PirateShop({
           { key: 'defense', label: 'حمايه', activeColor: '#a855f7' },
           { key: 'hamour', label: 'أسلحه', activeColor: '#f97316' },
           { key: 'crew_services', label: 'طواقم', activeColor: '#10b981' },
-          { key: 'vip', label: 'VIP', activeColor: '#eab308' },
           { key: 'backgrounds', label: 'خلفيات', activeColor: '#10b981' },
           { key: 'recharge', label: 'شحن', activeColor: '#ef4444' },
         ].map(tab => {
@@ -824,66 +805,66 @@ export default function PirateShop({
           <div>
             <div
               style={{
-                background: 'linear-gradient(90deg, rgba(30, 27, 75, 0.82), rgba(49, 16, 63, 0.82))',
+                background: 'linear-gradient(90deg, rgba(30, 27, 75, 0.9), rgba(49, 16, 63, 0.9))',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
-                border: '1.5px solid rgba(168, 85, 247, 0.65)',
-                borderRadius: '12px',
-                padding: '10px 16px',
-                marginBottom: '16px',
-                color: '#e9d5ff',
-                fontSize: '14px',
-                fontWeight: 'bold',
+                border: '2px solid rgba(168, 85, 247, 0.75)',
+                borderRadius: '14px',
+                padding: '14px 20px',
+                marginBottom: '20px',
+                color: '#f3e8ff',
+                fontSize: '17px',
+                fontWeight: '900',
                 textAlign: 'center',
-                boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
+                boxShadow: '0 4px 18px rgba(168, 85, 247, 0.4)',
               }}
             >
-              Protection – دروع الحماية والمضادات الساحلية
+              🛡️ Protection – دروع الحماية والمضادات الساحلية
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-5 md:gap-6">
               {[
-                { key: 'shield_4h', title: 'درع لمدة 4 ساعات', price: 60, costType: 'gems', desc: 'حماية 4 ساعات', icon: '🛡️' },
-                { key: 'shield_1d', title: 'درع لمدة يوم', price: 280, costType: 'gems', desc: 'حماية 24 ساعة', icon: '🛡️' },
-                { key: 'shield_2d', title: 'درع لمدة يومين', price: 550, costType: 'gems', desc: 'حماية 48 ساعة', icon: '🛡️' },
+                { key: 'shield_4h', title: 'درع لمدة 4 ساعات', price: 60, costType: 'gems', desc: 'حماية كاملة لمدة 4 ساعات', icon: '🛡️' },
+                { key: 'shield_1d', title: 'درع لمدة يوم', price: 280, costType: 'gems', desc: 'حماية كاملة لمدة 24 ساعة', icon: '🛡️' },
+                { key: 'shield_2d', title: 'درع لمدة يومين', price: 550, costType: 'gems', desc: 'حماية كاملة لمدة 48 ساعة', icon: '🛡️' },
               ].map(item => (
                 <div
                   key={item.key}
                   style={{
-                    background: 'linear-gradient(to bottom, rgba(24, 9, 43, 0.76), rgba(12, 4, 23, 0.85))',
+                    background: 'linear-gradient(to bottom, rgba(24, 9, 43, 0.88), rgba(12, 4, 23, 0.95))',
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                    border: '1.5px solid rgba(168, 85, 247, 0.6)',
-                    borderRadius: '14px',
-                    padding: '14px 12px',
+                    border: '2px solid rgba(168, 85, 247, 0.7)',
+                    borderRadius: '16px',
+                    padding: '22px 16px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
                   }}
                 >
                   <div
                     style={{
-                      width: '76px',
-                      height: '76px',
+                      width: '92px',
+                      height: '92px',
                       borderRadius: '50%',
-                      background: 'radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(24, 9, 43, 0.6) 100%)',
-                      border: '1.5px solid #c084fc',
+                      background: 'radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(24, 9, 43, 0.8) 100%)',
+                      border: '2px solid #c084fc',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '44px',
-                      margin: '6px 0 10px 0',
-                      boxShadow: '0 0 14px rgba(168, 85, 247, 0.3)',
+                      fontSize: '52px',
+                      margin: '6px 0 14px 0',
+                      boxShadow: '0 0 20px rgba(168, 85, 247, 0.45)',
                     }}
                   >
                     {item.icon}
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#e9d5ff', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#f3e8ff', marginBottom: '6px' }}>
                     {item.title}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#c084fc', marginBottom: '12px', flex: 1 }}>{item.desc}</div>
+                  <div style={{ fontSize: '15px', color: '#d8b4fe', marginBottom: '16px', flex: 1, fontWeight: 'bold' }}>{item.desc}</div>
 
                   <button
                     onClick={() => {
@@ -924,15 +905,15 @@ export default function PirateShop({
                       background: 'linear-gradient(to bottom, #a855f7, #7e22ce)',
                       color: '#fff',
                       border: 'none',
-                      borderRadius: '10px',
-                      padding: '8px 0',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
+                      borderRadius: '12px',
+                      padding: '12px 0',
+                      fontSize: '16px',
+                      fontWeight: '900',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 10px rgba(168, 85, 247, 0.4)',
+                      boxShadow: '0 4px 14px rgba(168, 85, 247, 0.45)',
                     }}
                   >
-                    💎 {item.price}
+                    💎 {item.price} جوهرة
                   </button>
                 </div>
               ))}
@@ -945,26 +926,81 @@ export default function PirateShop({
           <div>
             <div
               style={{
-                background: 'linear-gradient(90deg, rgba(69, 26, 3, 0.82), rgba(41, 10, 0, 0.82))',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1.5px solid rgba(249, 115, 22, 0.65)',
+                background: 'linear-gradient(90deg, #451a03, #78350f, #451a03)',
+                border: '1.5px solid #f97316',
                 borderRadius: '12px',
-                padding: '10px 16px',
+                padding: '12px 16px',
                 marginBottom: '16px',
                 color: '#ffedd5',
-                fontSize: '14px',
-                fontWeight: 'bold',
                 textAlign: 'center',
                 boxShadow: '0 4px 14px rgba(249, 115, 22, 0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                alignItems: 'center'
               }}
             >
-              Weapons – ترسانة الصواريخ والقنابل المدمرة
+              <div style={{ fontSize: '15px', fontWeight: '900', color: '#ffedd5', letterSpacing: '0.5px' }}>
+                🚀 ترسانة الأسلحة والقنابل المدمرة (تكبير العدد وخانة الكمية حسب رغبتك)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#fde047', fontWeight: 'bold' }}>⚡ كمية الشراء لكافة الأسلحة:</span>
+                {[1, 3, 4, 5, 10, 50, 100].map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setGlobalWeaponMultiplier(m);
+                      const updated: Record<string, number> = {};
+                      WEAPONS_DATA.forEach(w => { updated[w.key] = m; });
+                      setWeaponBuyMultipliers(updated);
+                    }}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '900',
+                      cursor: 'pointer',
+                      border: globalWeaponMultiplier === m ? '2px solid #fde047' : '1px solid rgba(255,255,255,0.25)',
+                      background: globalWeaponMultiplier === m ? 'linear-gradient(to bottom, #d97706, #92400e)' : 'rgba(0,0,0,0.55)',
+                      color: globalWeaponMultiplier === m ? '#ffffff' : '#e2e8f0',
+                      boxShadow: globalWeaponMultiplier === m ? '0 0 10px rgba(250, 204, 21, 0.6)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {m}x
+                  </button>
+                ))}
+
+                {/* خانة كتابة أي كمية تريدها للكل */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(0,0,0,0.6)', padding: '3px 8px', borderRadius: '8px', border: '1.5px solid #f97316' }}>
+                  <span style={{ fontSize: '11px', color: '#fdba74', fontWeight: 'bold' }}>✏️ خانة كمية مخصصة:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99999"
+                    value={globalWeaponMultiplier}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      const next = isNaN(val) || val < 1 ? 1 : val;
+                      setGlobalWeaponMultiplier(next);
+                      const updated: Record<string, number> = {};
+                      WEAPONS_DATA.forEach(w => { updated[w.key] = next; });
+                      setWeaponBuyMultipliers(updated);
+                    }}
+                    style={{ width: '60px', height: '24px', background: '#1c0a03', color: '#facc15', border: '1px solid #f97316', borderRadius: '4px', textAlign: 'center', fontWeight: '900', fontSize: '13px' }}
+                    title="اكتب أي كمية تريدها هنا"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
               {WEAPONS_DATA.map(item => {
-                const currentQty = weapons[item.key] || weapons[item.id] || 0;
+                const currentQty = weapons[item.key] || weapons[item.id] || (item.key === 'adBomb' ? weapons.emp_bomb : 0) || (item.key === 'atomicBomb' ? weapons.nuke_bomb : 0) || (item.key === 'smallRocket' ? weapons.small_missile : 0) || (item.key === 'mediumRocket' ? weapons.medium_missile : 0) || (item.key === 'largeRocket' ? weapons.large_missile : 0) || 0;
+                const selectedQty = weaponBuyMultipliers[item.key] || globalWeaponMultiplier || 1;
+                const totalCost = item.price * selectedQty;
+
                 return (
                   <div
                     key={item.id}
@@ -983,22 +1019,25 @@ export default function PirateShop({
                       position: 'relative',
                     }}
                   >
-                    {/* Quantity Badge */}
+                    {/* ENLARGED QUANTITY BADGE (تكبير عدد الأسلحة المملوكة) */}
                     <div
                       style={{
                         position: 'absolute',
                         top: '8px',
                         left: '8px',
-                        background: currentQty > 0 ? '#16a34a' : 'rgba(239, 68, 68, 0.3)',
+                        background: currentQty > 0 ? 'linear-gradient(135deg, #15803d, #166534)' : 'rgba(239, 68, 68, 0.35)',
                         color: currentQty > 0 ? '#ffffff' : '#fca5a5',
-                        border: currentQty > 0 ? '1px solid #4ade80' : '1px solid #ef4444',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        padding: '1px 6px',
+                        border: currentQty > 0 ? '2px solid #4ade80' : '1.5px solid #ef4444',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '900',
+                        padding: '3px 9px',
+                        boxShadow: currentQty > 0 ? '0 0 12px rgba(74, 222, 128, 0.7)' : 'none',
+                        zIndex: 10,
+                        letterSpacing: '0.5px'
                       }}
                     >
-                      {currentQty > 0 ? `${currentQty}x` : '0'}
+                      {currentQty > 0 ? `${currentQty.toLocaleString()}x` : '0x'}
                     </div>
 
                     <div
@@ -1050,8 +1089,33 @@ export default function PirateShop({
                       )}
                     </div>
 
-                    <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fdba74', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#fdba74', marginBottom: '2px' }}>
                       {item.name}
+                    </div>
+
+                    {/* ENLARGED PROMINENT COUNTER BAR */}
+                    <div 
+                      style={{
+                        width: '100%',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: currentQty > 0 ? '#86efac' : '#94a3b8',
+                        background: currentQty > 0 ? 'rgba(22, 101, 52, 0.45)' : 'rgba(0,0,0,0.4)',
+                        border: currentQty > 0 ? '1.5px solid rgba(74, 222, 128, 0.5)' : '1px solid rgba(148, 163, 184, 0.2)',
+                        borderRadius: '8px',
+                        padding: '3px 6px',
+                        marginBottom: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: currentQty > 0 ? '0 0 8px rgba(74, 222, 128, 0.25)' : 'none'
+                      }}
+                    >
+                      <span>لديك حالياً:</span>
+                      <strong style={{ fontSize: '15px', color: currentQty > 0 ? '#4ade80' : '#f87171' }}>
+                        {currentQty.toLocaleString()} قذيفة
+                      </strong>
                     </div>
 
                     {/* Damage Badge */}
@@ -1064,10 +1128,121 @@ export default function PirateShop({
                         border: '1px solid rgba(234, 179, 8, 0.4)',
                         borderRadius: '6px',
                         padding: '2px 8px',
-                        marginBottom: '8px'
+                        marginBottom: '6px'
                       }}
                     >
                       ⚔️ الضرر: {item.damage.toLocaleString()}
+                    </div>
+
+                    {/* QUANTITY BOX & CONTROLS (خانة إضافة الكمية حسب رغبتك) */}
+                    <div style={{ width: '100%', marginBottom: '8px', background: 'rgba(0,0,0,0.4)', padding: '6px 4px', borderRadius: '8px', border: '1px solid rgba(249, 115, 22, 0.3)' }}>
+                      <div style={{ fontSize: '11px', color: '#fed7aa', marginBottom: '4px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>🔢 خانة الكمية:</span>
+                        <span style={{ color: '#facc15', fontWeight: '900' }}>{selectedQty}x</span>
+                      </div>
+
+                      {/* Stepper + Direct Input Field */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '5px' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = Math.max(1, selectedQty - 1);
+                            setWeaponBuyMultipliers(prev => ({ ...prev, [item.key]: next }));
+                          }}
+                          style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '5px',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(239, 68, 68, 0.5)',
+                            color: '#ffffff',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -
+                        </button>
+
+                        <input
+                          type="number"
+                          min="1"
+                          max="99999"
+                          value={selectedQty}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            const next = isNaN(val) || val < 1 ? 1 : val;
+                            setWeaponBuyMultipliers(prev => ({ ...prev, [item.key]: next }));
+                          }}
+                          style={{
+                            width: '65px',
+                            height: '26px',
+                            borderRadius: '5px',
+                            border: '1.5px solid #facc15',
+                            background: '#0d0401',
+                            color: '#facc15',
+                            textAlign: 'center',
+                            fontSize: '13px',
+                            fontWeight: '900',
+                            padding: '0 2px'
+                          }}
+                          title="أدخل أي كمية تريد شراءها"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = selectedQty + 1;
+                            setWeaponBuyMultipliers(prev => ({ ...prev, [item.key]: next }));
+                          }}
+                          style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '5px',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(34, 197, 94, 0.5)',
+                            color: '#ffffff',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Quick Presets: 1, 3, 4, 5, 10, 50 */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', flexWrap: 'wrap' }}>
+                        {[1, 3, 4, 5, 10, 50].map(multiplier => {
+                          const isSelected = selectedQty === multiplier;
+                          return (
+                            <button
+                              key={multiplier}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setWeaponBuyMultipliers(prev => ({ ...prev, [item.key]: multiplier }));
+                              }}
+                              style={{
+                                fontSize: '10.5px',
+                                fontWeight: 'bold',
+                                padding: '2px 5px',
+                                borderRadius: '4px',
+                                border: isSelected ? '1.5px solid #facc15' : '1px solid rgba(255, 255, 255, 0.2)',
+                                background: isSelected ? 'linear-gradient(to bottom, #d97706, #92400e)' : 'rgba(0, 0, 0, 0.5)',
+                                color: isSelected ? '#ffffff' : '#d1d5db',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {multiplier}x
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <button
@@ -1078,10 +1253,11 @@ export default function PirateShop({
                             itemId: item.key,
                             itemName: item.name,
                             costType: item.costType === 'gold' ? 'gold' : 'blueGems',
-                            price: item.price
+                            price: totalCost,
+                            quantity: selectedQty
                           });
                         } else if (buyWeaponItem) {
-                          buyWeaponItem(item.key, item.costType === 'gold' ? 'gold' : 'blueGems', item.price);
+                          buyWeaponItem(item.key, item.costType === 'gold' ? 'gold' : 'blueGems', item.price, selectedQty);
                         }
                       }}
                       style={{
@@ -1090,16 +1266,18 @@ export default function PirateShop({
                           ? 'linear-gradient(to bottom, #d97706, #b45309)'
                           : 'linear-gradient(to bottom, #2563eb, #1d4ed8)',
                         color: '#fff',
-                        border: item.costType === 'gold' ? '1px solid #fef08a' : '1px solid #93c5fd',
+                        border: item.costType === 'gold' ? '1.5px solid #fef08a' : '1.5px solid #93c5fd',
                         borderRadius: '10px',
-                        padding: '8px 0',
+                        padding: '8px 4px',
                         fontSize: '12px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+                        boxShadow: '0 3px 12px rgba(0,0,0,0.5)',
                       }}
                     >
-                      {item.costType === 'gold' ? `🪙 ${item.price.toLocaleString()} ذهب` : `💎 ${item.price} جوهرة`}
+                      {item.costType === 'gold' 
+                        ? `🪙 شراء (${selectedQty}x) بـ ${totalCost.toLocaleString()} ذهب` 
+                        : `💎 شراء (${selectedQty}x) بـ ${totalCost.toLocaleString()} جوهرة`}
                     </button>
                   </div>
                 );
@@ -1111,21 +1289,74 @@ export default function PirateShop({
         {/* ==================== 3. TAB: طواقم (Ship Crew) ==================== */}
         {shopSubTab === 'crew_services' && (
           <div>
+            {/* GLOBAL CREW MULTIPLIER & CUSTOM INPUT BANNER */}
             <div
               style={{
-                background: 'linear-gradient(90deg, #022c22, #011711)',
-                border: '1.5px solid #10b981',
-                borderRadius: '12px',
-                padding: '10px 16px',
-                marginBottom: '16px',
-                color: '#a7f3d0',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                boxShadow: '0 4px 14px rgba(168, 85, 247, 0.3)',
+                background: 'linear-gradient(90deg, #1e1b4b, #312e81, #1e1b4b)',
+                border: '2px solid #818cf8',
+                borderRadius: '14px',
+                padding: '14px 18px',
+                marginBottom: '20px',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.6)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                alignItems: 'center'
               }}
             >
-              Ship Crew – طاقم السفينة والخبراء البحريين
+              <div style={{ fontSize: '17px', fontWeight: '900', color: '#e0e7ff', letterSpacing: '0.5px' }}>
+                👥 طاقم السفينة والخبراء البحريين (شراء بالكمية وتوظيف أكثر من فرد 3 أو 4 أو أي عدد)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <span style={{ fontSize: '13.5px', color: '#c7d2fe', fontWeight: '900' }}>⚡ كمية الشراء لأفراد الطاقم:</span>
+                {[1, 3, 4, 5, 10].map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setGlobalCrewMultiplier(m);
+                      const updated: Record<string, number> = {};
+                      CREW_SHOP_ITEMS.forEach(c => { updated[c.id] = m; });
+                      setCrewBuyMultipliers(updated);
+                    }}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '900',
+                      cursor: 'pointer',
+                      border: globalCrewMultiplier === m ? '2px solid #818cf8' : '1px solid rgba(255,255,255,0.25)',
+                      background: globalCrewMultiplier === m ? 'linear-gradient(to bottom, #4f46e5, #3730a3)' : 'rgba(0,0,0,0.55)',
+                      color: globalCrewMultiplier === m ? '#ffffff' : '#c7d2fe',
+                      boxShadow: globalCrewMultiplier === m ? '0 0 12px rgba(129, 140, 248, 0.6)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {m}x
+                  </button>
+                ))}
+
+                {/* خانة كمية مخصصة لأفراد الطاقم */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.6)', padding: '4px 10px', borderRadius: '8px', border: '1.5px solid #818cf8' }}>
+                  <span style={{ fontSize: '12.5px', color: '#c7d2fe', fontWeight: '900' }}>✏️ كمية مخصصة:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    value={globalCrewMultiplier}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      const next = isNaN(val) || val < 1 ? 1 : val;
+                      setGlobalCrewMultiplier(next);
+                      const updated: Record<string, number> = {};
+                      CREW_SHOP_ITEMS.forEach(c => { updated[c.id] = next; });
+                      setCrewBuyMultipliers(updated);
+                    }}
+                    style={{ width: '68px', height: '28px', background: '#0f172a', color: '#facc15', border: '1.5px solid #818cf8', borderRadius: '6px', textAlign: 'center', fontWeight: '900', fontSize: '14px' }}
+                    title="اكتب أي كمية تريد شراءها لأفراد الطاقم"
+                  />
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'center', padding: '10px 0' }}>
@@ -1140,16 +1371,19 @@ export default function PirateShop({
                   : item.id;
                 const assignedShip = ships.find(s => (s.assignedCrew || []).includes(normId) || (s.assignedCrew || []).includes(item.id));
                 const isAssigned = !!assignedShip;
+                const ownedCrewQty = (crewInventory && (crewInventory[item.id] || crewInventory[normId])) || 0;
+                const selectedCrewQty = crewBuyMultipliers[item.id] || globalCrewMultiplier || 1;
+                const totalCrewCost = item.price * selectedCrewQty;
 
                 return (
                 <div
                   key={item.id}
                   style={{
-                    width: '280px',
-                    height: '400px',
-                    minWidth: '280px',
-                    maxWidth: '280px',
-                    borderRadius: '16px',
+                    width: '300px',
+                    height: '515px',
+                    minWidth: '300px',
+                    maxWidth: '300px',
+                    borderRadius: '18px',
                     border: isAssigned ? '2.5px solid #22c55e' : '2px solid rgba(234, 179, 8, 0.75)',
                     boxShadow: isAssigned ? '0 0 18px rgba(34, 197, 94, 0.4)' : '0 12px 30px rgba(0,0,0,0.65), 0 0 16px rgba(234, 179, 8, 0.25)',
                     position: 'relative',
@@ -1201,8 +1435,8 @@ export default function PirateShop({
                       top: '20px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      width: '220px',
-                      height: '220px',
+                      width: '230px',
+                      height: '230px',
                       borderRadius: '50%',
                       background: 'radial-gradient(circle, rgba(250, 204, 21, 0.28) 0%, rgba(56, 189, 248, 0.18) 55%, transparent 75%)',
                       zIndex: 2,
@@ -1218,7 +1452,7 @@ export default function PirateShop({
                         top: 0,
                         left: 0,
                         right: 0,
-                        height: '280px',
+                        height: '270px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1248,11 +1482,11 @@ export default function PirateShop({
                         top: '20px',
                         left: 0,
                         right: 0,
-                        height: '240px',
+                        height: '230px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '92px',
+                        fontSize: '96px',
                         filter: 'drop-shadow(0 10px 18px rgba(0,0,0,0.85))',
                         zIndex: 3,
                       }}
@@ -1275,7 +1509,7 @@ export default function PirateShop({
                     }}
                   />
 
-                  {/* Top Badges */}
+                  {/* Top Badges (ENLARGED QUANTITY BADGE + PRICE & STATUS) */}
                   <div
                     style={{
                       position: 'absolute',
@@ -1288,58 +1522,47 @@ export default function PirateShop({
                       zIndex: 10,
                     }}
                   >
+                    {/* ENLARGED OWNED QUANTITY BADGE */}
                     <div
                       style={{
-                        background: 'rgba(10, 15, 30, 0.85)',
-                        color: '#fde047',
-                        border: '1px solid rgba(250, 204, 21, 0.5)',
+                        background: ownedCrewQty > 0 ? 'linear-gradient(135deg, #15803d, #166534)' : 'rgba(239, 68, 68, 0.4)',
+                        color: ownedCrewQty > 0 ? '#ffffff' : '#fca5a5',
+                        border: ownedCrewQty > 0 ? '2px solid #4ade80' : '1.5px solid #ef4444',
                         borderRadius: '8px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        padding: '3px 8px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
-                        backdropFilter: 'blur(4px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
+                        fontSize: '13.5px',
+                        fontWeight: '900',
+                        padding: '4px 10px',
+                        boxShadow: ownedCrewQty > 0 ? '0 0 10px rgba(74, 222, 128, 0.6)' : 'none',
+                        letterSpacing: '0.5px'
                       }}
                     >
-                      <span>{item.icon}</span>
-                      <span>طاقم بحري</span>
+                      {ownedCrewQty > 0 ? `${ownedCrewQty}x متوفر` : '0x غير متوفر'}
                     </div>
 
-                    <div
-                      style={{
-                        background: isAssigned
-                          ? 'rgba(22, 163, 74, 0.95)'
-                          : item.costType === 'gold'
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div
+                        style={{
+                          background: item.costType === 'gold'
                             ? 'rgba(234, 179, 8, 0.95)'
                             : 'rgba(56, 189, 248, 0.95)',
-                        color: isAssigned ? '#ffffff' : item.costType === 'gold' ? '#000000' : '#ffffff',
-                        border: isAssigned
-                          ? '1px solid #4ade80'
-                          : item.costType === 'gold'
+                          color: item.costType === 'gold' ? '#000000' : '#ffffff',
+                          border: item.costType === 'gold'
                             ? '1px solid #fef08a'
                             : '1px solid #7dd3fc',
-                        borderRadius: '8px',
-                        fontSize: '11.5px',
-                        fontWeight: 'bold',
-                        padding: '3px 10px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
-                        backdropFilter: 'blur(4px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                      }}
-                    >
-                      {isAssigned ? (
-                        <span>✔️ مُعيّن على {assignedShip?.name || 'السفينة'}</span>
-                      ) : (
-                        <>
-                          <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
-                          <span>{item.costType === 'gold' ? item.price.toLocaleString() : item.price}</span>
-                        </>
-                      )}
+                          borderRadius: '8px',
+                          fontSize: '12.5px',
+                          fontWeight: '900',
+                          padding: '4px 9px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
+                          backdropFilter: 'blur(4px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        <span>{item.costType === 'gold' ? '🪙' : '💎'}</span>
+                        <span>{item.costType === 'gold' ? item.price.toLocaleString() : item.price}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -1350,9 +1573,9 @@ export default function PirateShop({
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      background: 'linear-gradient(to top, rgba(6, 10, 22, 0.98) 0%, rgba(6, 10, 22, 0.9) 70%, rgba(6, 10, 22, 0.4) 92%, rgba(6, 10, 22, 0) 100%)',
+                      background: 'linear-gradient(to top, rgba(6, 10, 22, 0.98) 0%, rgba(6, 10, 22, 0.94) 80%, rgba(6, 10, 22, 0.5) 95%, rgba(6, 10, 22, 0) 100%)',
                       backdropFilter: 'blur(8px)',
-                      padding: '14px 14px 12px 14px',
+                      padding: '12px 14px 12px 14px',
                       borderTop: '1px solid rgba(250, 204, 21, 0.3)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -1364,7 +1587,7 @@ export default function PirateShop({
                     {/* Title */}
                     <div
                       style={{
-                        fontSize: '17px',
+                        fontSize: '17.5px',
                         fontWeight: '900',
                         color: '#facc15',
                         marginBottom: '4px',
@@ -1375,41 +1598,42 @@ export default function PirateShop({
                       }}
                     >
                       <span>{item.title}</span>
-                      <span style={{ fontSize: '18px' }}>{item.icon}</span>
+                      <span style={{ fontSize: '20px' }}>{item.icon}</span>
                     </div>
 
                     {/* Description */}
                     <div
                       style={{
-                        fontSize: '11.5px',
-                        color: '#e2e8f0',
+                        fontSize: '13px',
+                        color: '#f1f5f9',
                         lineHeight: '1.4',
                         marginBottom: '6px',
                         textShadow: '0 1px 3px rgba(0,0,0,0.8)',
-                        minHeight: '32px',
+                        minHeight: '34px',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
+                        fontWeight: '600'
                       }}
                     >
                       {item.desc}
                     </div>
 
-                    {/* Stars and rarity */}
+                    {/* Stars, Status, Rarity */}
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '4px 8px',
-                        marginBottom: '8px',
+                        marginBottom: '6px',
                         background: 'rgba(0, 0, 0, 0.65)',
                         border: '1px solid rgba(234, 179, 8, 0.35)',
                         borderRadius: '8px',
                       }}
                     >
-                      <div style={{ display: 'flex', gap: '2px', color: '#fbbf24', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', gap: '1px', color: '#fbbf24', fontSize: '12px' }}>
                         <span>⭐</span>
                         <span>⭐</span>
                         <span>⭐</span>
@@ -1417,77 +1641,171 @@ export default function PirateShop({
                         <span>⭐</span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 'bold' }}>
-                        <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <span>💎</span>
-                          <span>نادر</span>
-                        </span>
-                        <span style={{ color: '#fbbf24' }}>⚓</span>
+                      {isAssigned ? (
+                        <div style={{ color: '#4ade80', fontSize: '11.5px', fontWeight: '900' }}>
+                          ✔️ مُعيّن على {assignedShip?.name || 'السفينة'}
+                        </div>
+                      ) : (
+                        <div style={{ color: '#38bdf8', fontSize: '11.5px', fontWeight: '900' }}>
+                          ⚓ جاهز للتوظيف
+                        </div>
+                      )}
+                    </div>
+
+                    {/* QUANTITY BOX & CONTROLS */}
+                    <div style={{ width: '100%', marginBottom: '8px', background: 'rgba(0,0,0,0.5)', padding: '6px 6px', borderRadius: '10px', border: '1.5px solid rgba(129, 140, 248, 0.4)' }}>
+                      <div style={{ fontSize: '11.5px', color: '#c7d2fe', marginBottom: '4px', fontWeight: '900', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>🔢 خانة تحديد الكمية (3 أو 4 أو أكثر):</span>
+                        <span style={{ color: '#facc15', fontWeight: '900', fontSize: '12.5px' }}>{selectedCrewQty}x فرد</span>
+                      </div>
+
+                      {/* Stepper + Direct Input Field */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '5px' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = Math.max(1, selectedCrewQty - 1);
+                            setCrewBuyMultipliers(prev => ({ ...prev, [item.id]: next }));
+                          }}
+                          style={{
+                            width: '32px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(239, 68, 68, 0.6)',
+                            color: '#ffffff',
+                            fontSize: '15px',
+                            fontWeight: '900',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          -
+                        </button>
+
+                        <input
+                          type="number"
+                          min="1"
+                          max="999"
+                          value={selectedCrewQty}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            const next = isNaN(val) || val < 1 ? 1 : val;
+                            setCrewBuyMultipliers(prev => ({ ...prev, [item.id]: next }));
+                          }}
+                          style={{
+                            width: '66px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            border: '1.5px solid #818cf8',
+                            background: '#090d16',
+                            color: '#facc15',
+                            textAlign: 'center',
+                            fontSize: '14px',
+                            fontWeight: '900',
+                            padding: '0 2px'
+                          }}
+                          title="أدخل أي كمية من أفراد الطاقم تريد شراءها"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = selectedCrewQty + 1;
+                            setCrewBuyMultipliers(prev => ({ ...prev, [item.id]: next }));
+                          }}
+                          style={{
+                            width: '32px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(34, 197, 94, 0.6)',
+                            color: '#ffffff',
+                            fontSize: '15px',
+                            fontWeight: '900',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Quick Presets: 1, 3, 4, 5, 10 */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                        {[1, 3, 4, 5, 10].map(multiplier => {
+                          const isSelected = selectedCrewQty === multiplier;
+                          return (
+                            <button
+                              key={multiplier}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCrewBuyMultipliers(prev => ({ ...prev, [item.id]: multiplier }));
+                              }}
+                              style={{
+                                fontSize: '11.5px',
+                                fontWeight: '900',
+                                padding: '3px 7px',
+                                borderRadius: '6px',
+                                border: isSelected ? '1.5px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.2)',
+                                background: isSelected ? 'linear-gradient(to bottom, #4f46e5, #3730a3)' : 'rgba(0, 0, 0, 0.5)',
+                                color: isSelected ? '#ffffff' : '#c7d2fe',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {multiplier}x
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* Buy or Assigned Button */}
-                    {isAssigned ? (
-                      <div
-                        style={{
-                          width: '100%',
-                          background: 'rgba(22, 163, 74, 0.3)',
-                          color: '#4ade80',
-                          border: '1px solid #16a34a',
-                          borderRadius: '8px',
-                          padding: '8px 0',
-                          fontSize: '13px',
-                          fontWeight: '900',
-                          boxShadow: '0 0 12px rgba(34, 197, 94, 0.25)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <span>✔️</span>
-                        <span>مُعيّن على {assignedShip?.name || 'السفينة'}</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (handlePurchase) {
-                            handlePurchase({
-                              category: 'crew',
-                              itemId: item.id,
-                              itemName: item.title,
-                              costType: item.costType === 'gold' ? 'gold' : 'gems',
-                              price: item.price
-                            });
-                          } else if (buyCrewService) {
-                            buyCrewService(item.id, item.title, item.price);
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          background: item.costType === 'gold' 
-                            ? 'linear-gradient(to bottom, #f59e0b, #d97706)' 
-                            : 'linear-gradient(to bottom, #0284c7, #0369a1)',
-                          color: '#fff',
-                          border: item.costType === 'gold' ? '1px solid #fde68a' : '1px solid #bae6fd',
-                          borderRadius: '8px',
-                          padding: '8px 0',
-                          fontSize: '13px',
-                          fontWeight: '900',
-                          cursor: 'pointer',
-                          boxShadow: item.costType === 'gold' ? '0 4px 12px rgba(245, 158, 11, 0.4)' : '0 4px 12px rgba(2, 132, 199, 0.4)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        <span>توظيف وتعيين</span>
-                        <span>|</span>
-                        <span>{item.costType === 'gold' ? `🪙 ${item.price.toLocaleString()}` : `💎 ${item.price}`}</span>
-                      </button>
-                    )}
+                    {/* Multi-Crew Buy Button */}
+                    <button
+                      onClick={() => {
+                        if (handlePurchase) {
+                          handlePurchase({
+                            category: 'crew',
+                            itemId: item.id,
+                            itemName: item.title,
+                            costType: item.costType === 'gold' ? 'gold' : 'gems',
+                            price: totalCrewCost,
+                            quantity: selectedCrewQty
+                          });
+                        } else if (buyCrewService) {
+                          buyCrewService(item.id, item.title, totalCrewCost, 0, item.costType, undefined, selectedCrewQty);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        background: item.costType === 'gold' 
+                          ? 'linear-gradient(to bottom, #f59e0b, #d97706)' 
+                          : 'linear-gradient(to bottom, #0284c7, #0369a1)',
+                        color: '#fff',
+                        border: item.costType === 'gold' ? '1.5px solid #fde68a' : '1.5px solid #bae6fd',
+                        borderRadius: '10px',
+                        padding: '9px 6px',
+                        fontSize: '13.5px',
+                        fontWeight: '900',
+                        cursor: 'pointer',
+                        boxShadow: item.costType === 'gold' ? '0 4px 12px rgba(245, 158, 11, 0.4)' : '0 4px 12px rgba(2, 132, 199, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <span style={{ fontSize: '15px' }}>🛒</span>
+                      <span>
+                        {item.costType === 'gold' 
+                          ? `شراء وتوظيف (${selectedCrewQty}x) بـ ${totalCrewCost.toLocaleString()} ذهب` 
+                          : `شراء وتوظيف (${selectedCrewQty}x) بـ ${totalCrewCost.toLocaleString()} جوهرة`}
+                      </span>
+                    </button>
                   </div>
                 </div>
               );
@@ -1496,147 +1814,56 @@ export default function PirateShop({
           </div>
         )}
 
-        {/* ==================== 4. TAB: VIP (Elite VIP) ==================== */}
-        {shopSubTab === 'vip' && (
-          <div>
-            <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(76, 5, 25, 0.82) 0%, rgba(30, 0, 8, 0.86) 100%)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1.5px solid rgba(244, 63, 94, 0.7)',
-                borderRadius: '16px',
-                padding: '18px',
-                textAlign: 'center',
-                boxShadow: '0 10px 30px rgba(244, 63, 94, 0.35)',
-                marginBottom: '18px',
-              }}
-            >
-              <span style={{ fontSize: '48px', display: 'block', marginBottom: '6px' }}>👑</span>
-              <h3 style={{ margin: '6px 0', fontSize: '18px', fontWeight: 'bold', color: '#f43f5e' }}>
-                Elite VIP – مجلس الملوك الأسطوري
-              </h3>
-              <p style={{ margin: '0 0 14px 0', fontSize: '12px', color: '#fda4af' }}>
-                افتح مزايا كبار الشخصيات للحصول على صيد مضاعف وحصانة ملكية!
-              </p>
-
-              <button
-                onClick={claimVipReward}
-                style={{
-                  background: 'linear-gradient(180deg, #f43f5e 0%, #be123c 100%)',
-                  color: '#fff',
-                  border: '1.5px solid #ffe4e6',
-                  borderRadius: '10px',
-                  padding: '9px 20px',
-                  fontWeight: 'bold',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(244,63,94,0.4)',
-                }}
-              >
-                🎁 المطالبة بالهدية اليومية لـ VIP
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { rank: 'ELITE VIP 1', name: 'المرسواة البرونزية', price: 81.94, days: 50 },
-                { rank: 'ELITE VIP 2', name: 'الدرع الذهبي', price: 125.06, days: 120 },
-                { rank: 'ELITE VIP 3', name: 'التاج الذهبي', price: 211.31, days: 250 },
-                { rank: 'ELITE VIP 4', name: 'السفينة الملكية', price: 340.69, days: 450 },
-                { rank: 'ELITE VIP 5', name: 'التنين الأسطوري', price: 426.94, days: 800 },
-              ].map(vip => (
-                <div
-                  key={vip.rank}
-                  style={{
-                    background: 'linear-gradient(to bottom, rgba(31, 8, 18, 0.78), rgba(13, 3, 7, 0.85))',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    border: '1.5px solid rgba(244, 63, 94, 0.6)',
-                    borderRadius: '12px',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#f43f5e', fontWeight: 'bold' }}>{vip.rank}</span>
-                    <h4 style={{ margin: '2px 0 0 0', fontSize: '14px', color: '#fef08a', fontWeight: 'bold' }}>
-                      {vip.name}
-                    </h4>
-                    <span style={{ fontSize: '11px', color: '#fda4af' }}>مفعل لمدة {vip.days} يوماً</span>
-                  </div>
-
-                  <button
-                    onClick={() => handlePay({ title: `${vip.rank} - ${vip.name}`, price: vip.price, givesGems: 10000 })}
-                    style={{
-                      background: 'linear-gradient(to bottom, #eab308, #ca8a04)',
-                      color: '#000',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 16px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {vip.price} ر.س
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* ==================== 6. TAB: خلفيات (Backgrounds) ==================== */}
         {shopSubTab === 'backgrounds' && (
           <div>
             <div
               style={{
-                background: 'linear-gradient(90deg, rgba(6, 78, 59, 0.82), rgba(2, 44, 34, 0.82))',
+                background: 'linear-gradient(90deg, rgba(6, 78, 59, 0.9), rgba(2, 44, 34, 0.9))',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
-                border: '1.5px solid rgba(16, 185, 129, 0.65)',
-                borderRadius: '12px',
-                padding: '10px 16px',
-                marginBottom: '16px',
+                border: '2px solid rgba(16, 185, 129, 0.75)',
+                borderRadius: '14px',
+                padding: '14px 20px',
+                marginBottom: '20px',
                 color: '#a7f3d0',
-                fontSize: '14px',
-                fontWeight: 'bold',
+                fontSize: '17px',
+                fontWeight: '900',
                 textAlign: 'center',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                boxShadow: '0 4px 18px rgba(16, 185, 129, 0.35)',
               }}
             >
-              Backgrounds – خلفيات الميناء والمشاهد البحرية
+              🖼️ Backgrounds – خلفيات الميناء والمشاهد البحرية
             </div>
 
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                gap: '12px',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+                gap: '16px',
               }}
             >
               {BACKGROUND_ITEMS.map(bg => (
                 <div
                   key={bg.id}
                   style={{
-                    background: 'linear-gradient(to bottom, rgba(6, 35, 28, 0.76), rgba(3, 20, 16, 0.85))',
+                    background: 'linear-gradient(to bottom, rgba(6, 35, 28, 0.88), rgba(3, 20, 16, 0.95))',
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                    border: bgTheme === bg.id ? '2px solid #facc15' : '1.5px solid rgba(16, 185, 129, 0.6)',
-                    borderRadius: '12px',
-                    padding: '12px',
+                    border: bgTheme === bg.id ? '2.5px solid #facc15' : '2px solid rgba(16, 185, 129, 0.65)',
+                    borderRadius: '16px',
+                    padding: '18px 14px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
                     position: 'relative',
+                    boxShadow: bgTheme === bg.id ? '0 0 20px rgba(250, 204, 21, 0.4)' : '0 6px 18px rgba(0,0,0,0.6)',
                   }}
                 >
-                  <div style={{ fontSize: '36px', margin: '8px 0' }}>🖼️</div>
-                  <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#6ee7b7', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '46px', margin: '8px 0 12px 0' }}>🖼️</div>
+                  <div style={{ fontSize: '17px', fontWeight: '900', color: '#a7f3d0', marginBottom: '10px' }}>
                     {bg.title}
                   </div>
 
@@ -1649,11 +1876,12 @@ export default function PirateShop({
                         : 'linear-gradient(to bottom, #10b981, #047857)',
                       color: bgTheme === bg.id ? '#000' : '#fff',
                       border: 'none',
-                      borderRadius: '8px',
-                      padding: '7px 0',
-                      fontSize: '11.5px',
-                      fontWeight: 'bold',
+                      borderRadius: '10px',
+                      padding: '11px 0',
+                      fontSize: '15px',
+                      fontWeight: '900',
                       cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
                     }}
                   >
                     {bgTheme === bg.id ? 'مجهزة الآن ✓' : bg.isFree ? 'تجهيز مجاني' : `🪙 ${bg.priceGold.toLocaleString()}`}
@@ -1666,47 +1894,47 @@ export default function PirateShop({
 
         {/* ==================== 6. TAB: شحن (Recharge) ==================== */}
         {shopSubTab === 'recharge' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Top Ocean Notice Header Banner */}
             <div
               style={{
                 background: 'linear-gradient(90deg, rgba(8, 26, 48, 0.95) 0%, rgba(3, 12, 24, 0.98) 50%, rgba(8, 26, 48, 0.95) 100%)',
-                border: '1.5px solid rgba(56, 189, 248, 0.4)',
-                borderRadius: '12px',
-                padding: '10px 14px',
+                border: '1.5px solid rgba(56, 189, 248, 0.5)',
+                borderRadius: '14px',
+                padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: '8px',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(56, 189, 248, 0.12)',
+                gap: '10px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(56, 189, 248, 0.15)',
               }}
             >
-              <span style={{ fontSize: '15px', color: '#38bdf8', opacity: 0.85 }}>⚓</span>
+              <span style={{ fontSize: '18px', color: '#38bdf8' }}>⚓</span>
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '11.5px',
-                  fontWeight: 'bold',
+                  gap: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: '900',
                   color: '#e0f2fe',
                   textAlign: 'center',
                   flex: 1,
                   justifyContent: 'center',
-                  lineHeight: '1.4',
+                  lineHeight: '1.5',
                 }}
               >
-                <span style={{ color: '#facc15', fontSize: '13px' }}>⚠️</span>
+                <span style={{ color: '#facc15', fontSize: '16px' }}>⚠️</span>
                 <span>جميع المبالغ بالريال السعودي، يتم إضافة الجواهر إلى حسابك مباشرة بعد إتمام الدفع.</span>
               </div>
-              <span style={{ fontSize: '15px', color: '#38bdf8', opacity: 0.85 }}>⚓</span>
+              <span style={{ fontSize: '18px', color: '#38bdf8' }}>⚓</span>
             </div>
 
             {/* Quick Restore & Warning Bar */}
             <div
               style={{
                 display: 'flex',
-                gap: '8px',
+                gap: '10px',
                 alignItems: 'stretch',
               }}
             >
@@ -1715,15 +1943,15 @@ export default function PirateShop({
                 style={{
                   flex: '0 0 auto',
                   background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-                  border: '1px solid rgba(56, 189, 248, 0.4)',
-                  borderRadius: '8px',
-                  padding: '6px 12px',
+                  border: '1.5px solid rgba(56, 189, 248, 0.5)',
+                  borderRadius: '10px',
+                  padding: '8px 16px',
                   color: '#38bdf8',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
+                  fontSize: '13px',
+                  fontWeight: '900',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '6px',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}
@@ -1734,25 +1962,26 @@ export default function PirateShop({
               <div
                 style={{
                   flex: 1,
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '8px',
-                  padding: '6px 10px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '10px',
+                  padding: '8px 14px',
                   color: '#fca5a5',
-                  fontSize: '10.5px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   textAlign: 'center',
-                  lineHeight: '1.3',
+                  lineHeight: '1.4',
                 }}
               >
                 ⚠️ جميع المشتريات نهائية – الجواهر رقمية وتسلم فورياً.
               </div>
             </div>
 
-            {/* Packages Vertical List - Exactly matching user reference */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', marginTop: '2px' }}>
+            {/* Packages Vertical List - Enlarged for mobile clarity */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
               {filteredRecharge.map(pkg => (
                 <div
                   key={pkg.id}
@@ -1761,13 +1990,13 @@ export default function PirateShop({
                     direction: 'ltr',
                     background: 'linear-gradient(90deg, rgba(8, 22, 38, 0.96) 0%, rgba(3, 10, 20, 0.98) 50%, rgba(8, 22, 38, 0.96) 100%)',
                     border: `1.5px solid ${pkg.theme.cardBorder}`,
-                    borderRadius: '12px',
-                    padding: '8px 12px',
+                    borderRadius: '14px',
+                    padding: '12px 16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '8px',
-                    boxShadow: `0 4px 16px rgba(0,0,0,0.85), inset 0 0 12px ${pkg.theme.innerGlow}`,
+                    gap: '12px',
+                    boxShadow: `0 4px 18px rgba(0,0,0,0.85), inset 0 0 14px ${pkg.theme.innerGlow}`,
                     overflow: 'hidden',
                   }}
                 >
@@ -1776,14 +2005,14 @@ export default function PirateShop({
                     <div
                       style={{
                         position: 'absolute',
-                        top: '10px',
+                        top: '12px',
                         left: '-32px',
                         transform: 'rotate(-45deg)',
                         background: 'linear-gradient(90deg, #9333ea, #7e22ce)',
                         color: '#fff',
-                        fontSize: '9px',
+                        fontSize: '10px',
                         fontWeight: '900',
-                        padding: '2px 32px',
+                        padding: '2px 34px',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.7)',
                         border: '1px solid #c084fc',
                         zIndex: 5,
@@ -1798,12 +2027,12 @@ export default function PirateShop({
                   <div
                     style={{
                       position: 'relative',
-                      width: '72px',
-                      height: '60px',
-                      borderRadius: '10px',
+                      width: '82px',
+                      height: '68px',
+                      borderRadius: '12px',
                       background: 'radial-gradient(circle, rgba(14, 38, 66, 0.95) 0%, rgba(3, 12, 24, 0.98) 100%)',
-                      border: '1.5px solid rgba(56, 189, 248, 0.5)',
-                      boxShadow: 'inset 0 0 10px rgba(0,0,0,0.9), 0 0 12px rgba(56, 189, 248, 0.3)',
+                      border: '1.5px solid rgba(56, 189, 248, 0.6)',
+                      boxShadow: 'inset 0 0 10px rgba(0,0,0,0.9), 0 0 12px rgba(56, 189, 248, 0.35)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1839,13 +2068,13 @@ export default function PirateShop({
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      minWidth: '70px',
+                      minWidth: '85px',
                       direction: 'rtl',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: '18px',
+                        fontSize: '22px',
                         fontWeight: '900',
                         color: '#ffffff',
                         fontFamily: 'Cairo, sans-serif',
@@ -1860,14 +2089,14 @@ export default function PirateShop({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
-                        fontSize: '11px',
+                        gap: '4px',
+                        fontSize: '13px',
                         color: '#38bdf8',
-                        fontWeight: 'bold',
+                        fontWeight: '900',
                       }}
                     >
                       <span>جوهرة</span>
-                      <span style={{ fontSize: '11px' }}>💎</span>
+                      <span style={{ fontSize: '13px' }}>💎</span>
                     </div>
                   </div>
 
@@ -1879,7 +2108,7 @@ export default function PirateShop({
                       justifyContent: 'center',
                       opacity: 0.35,
                       color: '#d4af37',
-                      fontSize: '9px',
+                      fontSize: '11px',
                     }}
                   >
                     <span>◆</span>
@@ -1892,13 +2121,13 @@ export default function PirateShop({
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      minWidth: '92px',
+                      minWidth: '110px',
                       direction: 'rtl',
                     }}
                   >
                     <div
                       style={{
-                        fontSize: '13px',
+                        fontSize: '15.5px',
                         fontWeight: '900',
                         color: '#facc15',
                         fontFamily: 'Cairo, sans-serif',
@@ -1913,14 +2142,14 @@ export default function PirateShop({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
-                        fontSize: '10.5px',
+                        gap: '4px',
+                        fontSize: '12px',
                         color: '#fef08a',
-                        fontWeight: 'bold',
+                        fontWeight: '900',
                       }}
                     >
                       <span>هدية مجانية</span>
-                      <span style={{ fontSize: '10.5px' }}>🎁</span>
+                      <span style={{ fontSize: '12px' }}>🎁</span>
                     </div>
                   </div>
 
@@ -1932,7 +2161,7 @@ export default function PirateShop({
                       justifyContent: 'center',
                       opacity: 0.35,
                       color: '#d4af37',
-                      fontSize: '9px',
+                      fontSize: '11px',
                     }}
                   >
                     <span>◆</span>
@@ -1944,8 +2173,8 @@ export default function PirateShop({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '4px',
-                      minWidth: '95px',
+                      gap: '5px',
+                      minWidth: '105px',
                       flexShrink: 0,
                       direction: 'rtl',
                     }}
@@ -1956,8 +2185,8 @@ export default function PirateShop({
                         background: pkg.theme.tagBg,
                         border: `1px solid ${pkg.theme.tagBorder}`,
                         borderRadius: '12px',
-                        padding: '1px 8px',
-                        fontSize: '10px',
+                        padding: '2px 10px',
+                        fontSize: '11px',
                         fontWeight: '900',
                         color: pkg.theme.tagText,
                         boxShadow: `0 0 8px ${pkg.theme.innerGlow}`,
@@ -1977,10 +2206,10 @@ export default function PirateShop({
                         width: '100%',
                         background: pkg.theme.btnGrad,
                         border: `1.5px solid ${pkg.theme.btnBorder}`,
-                        borderRadius: '8px',
-                        padding: '5px 10px',
+                        borderRadius: '10px',
+                        padding: '7px 14px',
                         color: '#ffffff',
-                        fontSize: '13px',
+                        fontSize: '15px',
                         fontWeight: '900',
                         fontFamily: 'Cairo, sans-serif',
                         cursor: 'pointer',

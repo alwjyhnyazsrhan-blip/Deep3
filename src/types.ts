@@ -26,6 +26,7 @@ export interface ShipState {
   transitionDuration?: string;
   assignedCrew?: string[];
   autoFishingPaused?: boolean;
+  expectedFish?: string;
   lastMoveTime?: number;
   progress?: number;
 }
