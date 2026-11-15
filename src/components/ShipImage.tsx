@@ -102,6 +102,9 @@ export const getShipCardRect = (level: number): CardRect => {
   }
 };
 
+export const FISHERMAN_BOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_01.png";
+export const SMALL_SAILBOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_02.png";
+export const SAILBOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_03.png";
 export const SUBMARINE_BASIC_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_6_saudi_classic.png";
 export const SUBMARINE_UPGRADE_1_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_1_gold_saudi%20(1).png";
 export const SUBMARINE_UPGRADE_2_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_2_green_aura.png";
@@ -111,6 +114,15 @@ export const SUBMARINE_UPGRADE_MAX_IMAGE = "https://raw.githubusercontent.com/al
 
 const getLocalShipUrl = (lvl: number): string => {
   const num = Number(lvl) || 0;
+  if (num === 1) {
+    return FISHERMAN_BOAT_IMAGE;
+  }
+  if (num === 2) {
+    return SMALL_SAILBOAT_IMAGE;
+  }
+  if (num === 3) {
+    return SAILBOAT_IMAGE;
+  }
   if (num === 32) {
     return SUBMARINE_BASIC_IMAGE;
   }
@@ -135,9 +147,9 @@ const getLocalShipUrl = (lvl: number): string => {
 
 const SHIP_IMAGES_1_TO_31: Record<number, string> = {
   0: '/ships/ship_00.webp',
-  1: '/ships/ship_01.webp',
-  2: '/ships/ship_02.webp',
-  3: '/ships/ship_03.webp',
+  1: FISHERMAN_BOAT_IMAGE,
+  2: SMALL_SAILBOAT_IMAGE,
+  3: SAILBOAT_IMAGE,
   4: '/ships/ship_04.webp',
   5: '/ships/ship_05.webp',
   6: '/ships/ship_06.webp',
@@ -241,8 +253,8 @@ const ShipImage: React.FC<ShipImageProps> = ({ level, width = 140, plain = false
         backgroundColor: plain ? 'transparent' : '#140c06',
         transform: `scale(${scaleVal}) translateY(${translateYVal})`,
         transformOrigin: 'center center',
-        WebkitMaskImage: plain && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
-        maskImage: plain && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        WebkitMaskImage: plain && safeLvl !== 1 && safeLvl !== 2 && safeLvl !== 3 && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        maskImage: plain && safeLvl !== 1 && safeLvl !== 2 && safeLvl !== 3 && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

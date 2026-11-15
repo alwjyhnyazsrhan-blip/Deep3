@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShipState } from '../types';
 import { FIXER_SMALL_ICON, FIXER_MEDIUM_ICON, FIXER_LARGE_ICON, FIXER_LEGENDARY_ICON } from '../data';
+import ShipImage from './ShipImage';
 
 interface ShipWorkshopModalProps {
   ship: ShipState;
@@ -171,14 +172,18 @@ export const ShipWorkshopModal: React.FC<ShipWorkshopModalProps> = ({
 
                 {/* Boat Silhouette / Render */}
                 <div className="w-16 h-12 sm:w-20 sm:h-14 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                  <img 
-                    src="/assets/workshop_boat_crop.png" 
-                    alt={activeShip.name}
-                    className="max-w-full max-h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
+                  {activeShip.level && activeShip.level > 0 ? (
+                    <ShipImage level={activeShip.level} width={76} plain={true} fill={true} />
+                  ) : (
+                    <img 
+                      src="/assets/workshop_boat_crop.png" 
+                      alt={activeShip.name}
+                      className="max-w-full max-h-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)]"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  )}
                 </div>
               </div>
 
