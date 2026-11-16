@@ -105,6 +105,13 @@ export const getShipCardRect = (level: number): CardRect => {
 export const FISHERMAN_BOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_01.png";
 export const SMALL_SAILBOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_02.png";
 export const SAILBOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_03.png";
+export const MEDIUM_SAILBOAT_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_04.png";
+export const SMALL_MERCHANT_SHIP_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_05.png";
+export const MEDIUM_MERCHANT_SHIP_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_06.png";
+export const LIGHT_WARSHIP_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_07.png";
+export const MEDIUM_WARSHIP_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_08.png";
+export const ROYAL_SHIP_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_09.png";
+export const FLEET_SHIP_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/ship_10.png";
 export const SUBMARINE_BASIC_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_6_saudi_classic.png";
 export const SUBMARINE_UPGRADE_1_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_1_gold_saudi%20(1).png";
 export const SUBMARINE_UPGRADE_2_IMAGE = "https://raw.githubusercontent.com/alwjyhnyazsrhan-blip/my-game-assets/refs/heads/main/submarine_2_green_aura.png";
@@ -122,6 +129,27 @@ const getLocalShipUrl = (lvl: number): string => {
   }
   if (num === 3) {
     return SAILBOAT_IMAGE;
+  }
+  if (num === 4) {
+    return MEDIUM_SAILBOAT_IMAGE;
+  }
+  if (num === 5) {
+    return SMALL_MERCHANT_SHIP_IMAGE;
+  }
+  if (num === 6) {
+    return MEDIUM_MERCHANT_SHIP_IMAGE;
+  }
+  if (num === 7) {
+    return LIGHT_WARSHIP_IMAGE;
+  }
+  if (num === 8) {
+    return MEDIUM_WARSHIP_IMAGE;
+  }
+  if (num === 9) {
+    return ROYAL_SHIP_IMAGE;
+  }
+  if (num === 10) {
+    return FLEET_SHIP_IMAGE;
   }
   if (num === 32) {
     return SUBMARINE_BASIC_IMAGE;
@@ -150,13 +178,13 @@ const SHIP_IMAGES_1_TO_31: Record<number, string> = {
   1: FISHERMAN_BOAT_IMAGE,
   2: SMALL_SAILBOAT_IMAGE,
   3: SAILBOAT_IMAGE,
-  4: '/ships/ship_04.webp',
-  5: '/ships/ship_05.webp',
-  6: '/ships/ship_06.webp',
-  7: '/ships/ship_07.webp',
-  8: '/ships/ship_08.webp',
-  9: '/ships/ship_09.webp',
-  10: '/ships/ship_10.webp',
+  4: MEDIUM_SAILBOAT_IMAGE,
+  5: SMALL_MERCHANT_SHIP_IMAGE,
+  6: MEDIUM_MERCHANT_SHIP_IMAGE,
+  7: LIGHT_WARSHIP_IMAGE,
+  8: MEDIUM_WARSHIP_IMAGE,
+  9: ROYAL_SHIP_IMAGE,
+  10: FLEET_SHIP_IMAGE,
   11: '/ships/ship_11.webp',
   12: '/ships/ship_12.webp',
   13: '/ships/ship_13.webp',
@@ -186,11 +214,11 @@ const SHIP_SCALES: Record<number, number> = {
   3: 1.0,
   4: 1.0,
   5: 1.0,
-  6: 1.1,
-  7: 1.05,
-  8: 1.1,
-  9: 1.05,
-  10: 1.05,
+  6: 1.0,
+  7: 1.0,
+  8: 1.0,
+  9: 1.0,
+  10: 1.0,
   11: 1.05,
   12: 1.1,
   13: 1.1,
@@ -253,8 +281,8 @@ const ShipImage: React.FC<ShipImageProps> = ({ level, width = 140, plain = false
         backgroundColor: plain ? 'transparent' : '#140c06',
         transform: `scale(${scaleVal}) translateY(${translateYVal})`,
         transformOrigin: 'center center',
-        WebkitMaskImage: plain && safeLvl !== 1 && safeLvl !== 2 && safeLvl !== 3 && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
-        maskImage: plain && safeLvl !== 1 && safeLvl !== 2 && safeLvl !== 3 && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        WebkitMaskImage: plain && !(safeLvl >= 1 && safeLvl <= 10) && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
+        maskImage: plain && !(safeLvl >= 1 && safeLvl <= 10) && safeLvl < 32 && localUrl ? 'radial-gradient(ellipse 65% 55% at 50% 50%, black 40%, rgba(0,0,0,0.85) 60%, transparent 92%)' : undefined,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
